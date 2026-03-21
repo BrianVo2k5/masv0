@@ -2,3 +2,5 @@ kivy[full]
 kivymd
 kaki
 watchdog
+gspread
+google-auth
