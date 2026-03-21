@@ -15,7 +15,6 @@ from kivymd.uix.dialog import MDDialog
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.selectioncontrol import MDCheckbox
 
-
 class FeedbackContent(MDBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -26,10 +25,10 @@ class FeedbackContent(MDBoxLayout):
         
         self.ratings = {
             "Accuracy": 0,
-            "Helpfulness": 0,
-            "Speed": 0,
+            "Length": 0,
+            "Legibility": 0,
             "Tone": 0,
-            "Overall": 0
+            "Quality": 0
         }
         self.star_buttons = {}
         
@@ -196,8 +195,11 @@ class ChatScreen(MDScreen):
             self.submit_btn.theme_text_color = "Hint"    
 
     def submit_feedback(self, prompt_text, bot_response):
+        app = MDApp.get_running_app()
         ratings_dict = self.feedback_content.ratings 
         feedback_text = self.feedback_content.feedback_input.text
+
+        user_uuid = getattr(app, 'user_uuid', "Unknown_UUID")
         
         # 1. Dismiss the dialog immediately so the user doesn't have to wait
         self.dialog.dismiss()
@@ -205,11 +207,11 @@ class ChatScreen(MDScreen):
         # 2. Start a background thread to upload the data to Google Sheets
         threading.Thread(
             target=self._upload_to_sheets_worker,
-            args=(prompt_text, bot_response, ratings_dict, feedback_text),
+            args=(prompt_text, bot_response, ratings_dict, feedback_text, user_uuid),
             daemon=True
         ).start()
 
-    def _upload_to_sheets_worker(self, prompt_text, bot_response, ratings_dict, feedback_text):
+    def _upload_to_sheets_worker(self, prompt_text, bot_response, ratings_dict, feedback_text, user_uuid):
         """This runs in the background to prevent freezing the UI."""
         try:
 
@@ -221,13 +223,14 @@ class ChatScreen(MDScreen):
             
             row_data = [
                 timestamp,
+                user_uuid,
                 prompt_text,
                 bot_response,
                 ratings_dict.get("Accuracy", 0),
-                ratings_dict.get("Helpfulness", 0),
-                ratings_dict.get("Speed", 0),
+                ratings_dict.get("Length", 0),
+                ratings_dict.get("Legibility", 0),
                 ratings_dict.get("Tone", 0),
-                ratings_dict.get("Overall", 0),
+                ratings_dict.get("Quality", 0),
                 feedback_text
             ]
             

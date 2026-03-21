@@ -11,6 +11,7 @@ from kivy.core.window import Window
 from kivy.animation import Animation
 from contents.chat import ChatScreen
 from kivy.core.window import Window
+import uuid
 
 # Set the window size (width, height)
 Window.size = (1600, 900) 
@@ -27,6 +28,7 @@ class ChatApp(App, MDApp):
     AUTORELOADER_PATHS = [(".", {"recursive": True})]
 
     reveal_radius = NumericProperty(0) 
+    user_uuid = str(uuid.uuid4())
     user_name = StringProperty("buddy") 
     bot_name = StringProperty("researchr.masv0")
     bot_description = StringProperty("Your friendly neighboorhood summarizer.")
