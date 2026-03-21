@@ -1,5 +1,8 @@
 <a name="top"></a><center>
-![researchr.masv0](https://i.postimg.cc/nzRPw2Dv/re.jpg)
+<div align="center">
+  <img src="https://i.postimg.cc/23Ryh4TH/re.png" alt="Researchr Logo" width="200">
+  <h1>Researchr — MASv0</h1>
+</div>
 
 [![language](https://img.shields.io/badge/language-Python-239120)](https://learn.microsoft.com/ru-ru/dotnet/csharp/tour-of-csharp/overview)
 [![OS](https://img.shields.io/badge/OS-linux%2C%20windows%2C%20macOS-0078D4)](https://docs.abblix.com/docs/technical-requirements)
@@ -23,7 +26,7 @@
 
 ## ✨ What's New
 
-### Version 0.0.2 (Latest)
+### Version 0.0.1 (Latest)
 
 🚀 **Features**
 - Debugging phase.
