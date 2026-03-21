@@ -1,0 +1,166 @@
+<MainRoot>:
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+        StencilPush
+        Ellipse:
+            pos: self.center_x - app.reveal_radius, self.center_y - app.reveal_radius
+            size: app.reveal_radius * 2, app.reveal_radius * 2
+        StencilUse
+        Color:
+            rgba: 1, 1, 1, 1
+    canvas.after:
+        StencilUnUse
+        Ellipse:
+            pos: self.center_x - app.reveal_radius, self.center_y - app.reveal_radius
+            size: app.reveal_radius * 2, app.reveal_radius * 2
+        StencilPop
+
+    MDScreenManager:
+        id: screen_manager
+        SetupScreen:
+            name: "setup"
+        ChatScreen:
+            name: "chat"
+        SettingsScreen:
+            name: "settings"
+
+<SetupScreen@MDScreen>:
+    md_bg_color: 1, 1, 1, 1
+    MDBoxLayout:
+        orientation: "vertical"
+        padding: "40dp"
+        spacing: "30dp"
+        pos_hint: {"center_x": .5, "center_y": .5}
+        size_hint_y: None
+        height: self.minimum_height
+
+        FitImage:
+            source: "app_textures/chat.jpg"
+            size_hint: None, None
+            size: "200dp", "200dp"
+            pos_hint: {"center_x": .5}
+
+        MDLabel:
+            text: app.bot_name
+            font_style: "H4"
+            halign: "center"
+            theme_text_color: "Primary"
+
+        MDLabel:
+            text: app.bot_description
+            font_style: "Body1"
+            halign: "center"
+            theme_text_color: "Secondary"
+            italic: True
+
+        RelativeLayout:
+            size_hint: .8, None
+            height: name_input.height
+            pos_hint: {"center_x": .5}
+
+            MDTextField:
+                id: name_input
+                font_name: "JetBrains Mono"
+                hint_text: "" # Real hint is hidden
+                mode: "round"
+                on_text_validate: app.switch_to_chat(self.text)
+
+            MDLabel:
+                text: "What's your name?"
+                font_name: "JetBrains Mono"
+                theme_text_color: "Hint"
+                pos_hint: {"center_y": .5}
+                x: "20dp" # Offset to look like it's inside the rounded field
+                opacity: 1 if not name_input.text else 0
+
+        MDFillRoundFlatButton:
+            text: "Start summarizing!"
+            # This makes it "Flat" by removing the shadow
+            elevation: 0
+            
+            # Customizing the "Tonal" colors
+            md_bg_color: 0.1, 0.1, 0.1, 1  # Very dark grey (almost black)
+            text_color: 1, 1, 1, 1         # White text
+            
+            pos_hint: {"center_x": .5}
+            on_release: app.switch_to_chat(name_input.text)
+
+<ChatScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        md_bg_color: 1, 1, 1, 1 
+
+        MDTopAppBar:
+            title: "What would you like to summarize today, " + app.user_name + "?"
+            elevation: 0
+            md_bg_color: 1, 1, 1, 1          
+            specific_text_color: 0, 0, 0, 1
+            right_action_items: [["cog", lambda x: app.switch_to_settings()]]
+
+        MDScrollView:
+            id: scroll_view
+            MDList:
+                id: chat_list
+                adaptive_height: True
+                padding: "20dp"
+                spacing: "15dp"
+
+        MDBoxLayout:
+            size_hint_y: None
+            height: "90dp"
+            padding: "10dp"
+            spacing: "10dp"
+            md_bg_color: 1, 1, 1, 1
+
+            RelativeLayout:
+                MDTextField:
+                    id: text_input
+                    font_name: "JetBrains Mono"
+                    hint_text: ""
+                    mode: "round"
+                    pos_hint: {"center_y": .5}
+                    on_text_validate: root.send_message(self, chat_list, scroll_view)
+
+                MDLabel:
+                    text: "Feed me the content and I'll summarize it!"
+                    font_name: "JetBrains Mono"
+                    theme_text_color: "Hint"
+                    pos_hint: {"center_y": .5}
+                    x: "20dp"
+                    opacity: 1 if not text_input.text else 0
+
+            MDIconButton:
+                pos_hint: {"center_y": .5}
+                icon: "send"
+                on_release: root.send_message(text_input, chat_list, scroll_view)
+
+<SettingsScreen@MDScreen>:
+    md_bg_color: 1, 1, 1, 1
+    MDBoxLayout:
+        orientation: 'vertical'
+        spacing: "-50dp"
+        MDTopAppBar:
+            elevation: 0
+            md_bg_color: 1, 1, 1, 1          
+            specific_text_color: 0, 0, 0, 1
+            left_action_items: [["arrow-left", lambda x: app.go_back_to_chat()]]   
+        
+        AsyncImage:
+            source: "app_textures/not_found.gif"
+            size_hint: None, None
+            size: "800dp", "800dp"
+            pos_hint: {"center_x": .5}
+            anim_delay: 0.032
+            anim_loop: 0
+            allow_stretch: True
+            keep_ratio: True
+            loading_image: 'app_textures/loading_placeholder.png' 
+        
+        MDLabel:
+            text: "404, 'settings' can't not be found, have you tried updating the application?"
+            halign: "center"
+            font_style: "H6"
