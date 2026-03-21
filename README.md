@@ -26,13 +26,13 @@
 
 ## ✨ What's New
 
-### Version 0.0.1 (Latest)
+### Version 0.0.2 (Latest)
 
 🚀 **Features**
 - Debugging phase.
 
 ✏️ **Improvements**
-- None.
+- "Feedback" added.
 
 ## 📝 How to use?
 
