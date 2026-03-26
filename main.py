@@ -52,13 +52,6 @@ class ChatApp(App, MDApp):
         
         return MainRoot()
 
-        for style in self.theme_cls.font_styles:
-            if style not in ["Icon", "Icons"]:
-                self.theme_cls.font_styles[style][0] = "JetBrains Mono"
-        
-        Clock.schedule_once(self.start_reveal_animation, 0.2)
-        return MainRoot()
-
     def get_manager(self):
         if self.root and 'screen_manager' in self.root.ids:
             return self.root.ids.screen_manager
