@@ -34,10 +34,6 @@
 ✏️ **Improvements**
 - "Feedback" added.
 
-Bạn đã nói
-
-how to end a line in git
-
 ## 📝 How to use?
 
 
