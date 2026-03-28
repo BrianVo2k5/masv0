@@ -37,30 +37,29 @@
 ## 📝 How to use?
 
 To use the bot, follow these steps:
-# Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)
+** Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)**
+** Ensure Git is installed **
+** Visit https://git-scm.com to download and install console Git if not already installed
 
-# Ensure Git is installed
-# Visit https://git-scm.com to download and install console Git if not already installed
-
-# Clone the repository from GitHub
+** Clone the repository from GitHub **
 ```git clone https://github.com/mitternachtslaeufer/bot.news.git```
 
-# Navigate to the project directory
+** Navigate to the project directory **
 ```cd bot.news```
 
-# Setup a Virtual Environment, this keeps the project dependencies isolated from your main computer settings
-# Create the environment
+** Setup a Virtual Environment, this keeps the project dependencies isolated from your main computer settings **
+** Create the environment **
 ```python -m venv venv```
 
-# Activate it (Windows)
+** Activate it (Windows) **
 ```.\venv\Scripts\activate```
-# Activate it (macOS/Linux)
+** Activate it (macOS/Linux) **
 ```source venv/bin/activate```
 
-# Once the environment is active, install the libraries required for the bot to work:
-# Use pip to install everything listed in requirements.txt
+** Once the environment is active, install the libraries required for the bot to work: **
+** Use pip to install everything listed in requirements.txt **
 ```pip install -r requirements.txt```
-# Execute the main script
+** Execute the main script **
 ```python main.py```
 
 ## 📚 Documentation
