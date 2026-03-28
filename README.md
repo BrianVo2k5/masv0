@@ -37,8 +37,6 @@
 ## 📝 How to use?
 
 To use the bot, follow these steps:
-
-```shell
 # Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)
 
 # Ensure Git is installed
@@ -64,7 +62,7 @@ To use the bot, follow these steps:
 ```pip install -r requirements.txt```
 # Execute the main script
 ```python main.py```
-```
+
 ## 📚 Documentation
 
 ### Getting Started
