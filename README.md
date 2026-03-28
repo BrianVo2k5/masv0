@@ -36,15 +36,15 @@
 
 ## 📝 How to use?
 
-To use the bot, follow these steps:
-**Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)**
-**Ensure Git is installed**
-**Visit https://git-scm.com to download and install console Git if not already installed**
+To use the bot, follow these steps:  
+**Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)**   
+**Ensure Git is installed**  
+**Visit https://git-scm.com to download and install console Git if not already installed**  
 
-**Clone the repository from GitHub**
+**Clone the repository from GitHub**  
 ```git clone https://github.com/mitternachtslaeufer/bot.news.git```
 
-**Navigate to the project directory**
+**Navigate to the project directory**  
 ```cd bot.news```
 
 **Setup a Virtual Environment, this keeps the project dependencies isolated from your main computer settings**
