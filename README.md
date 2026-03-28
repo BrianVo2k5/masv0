@@ -26,13 +26,15 @@
 
 ## ✨ What's New
 
-### Version 0.0.2 (Latest)
+### Version 0.0.3 (Latest)
 
 🚀 **Features**
 - Debugging phase.
+- Added experimental bot.
 
 ✏️ **Improvements**
 - "Feedback" added.
+- QoL updates!
 
 ## 📝 How to use?
 
@@ -46,7 +48,7 @@ To use the bot, follow these steps:
 ```git clone https://github.com/mitternachtslaeufer/bot.news.git```
 
 # Navigate to the project directory
-```cd bot.news```
+```cd masv0```
 
 # Setup a Virtual Environment, this keeps the project dependencies isolated from your main computer settings
 # Create the environment

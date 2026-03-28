@@ -14,6 +14,11 @@ from kivymd.uix.button import MDIconButton, MDFlatButton
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.selectioncontrol import MDCheckbox
+# IMPORTANT! BART-LARGE-CNN IS INTRODUCED HERE IN ORDER TO TEST OUT THE FUNCTIONS!
+import torch
+from transformers import pipeline
+summarizer = pipeline("summarization",model="facebook/bart-large-cnn")
+
 
 class FeedbackContent(MDBoxLayout):
     def __init__(self, **kwargs):
@@ -100,9 +105,47 @@ class ChatScreen(MDScreen):
         Clock.schedule_once(lambda dt: self.bot_reply(user_text, chat_list, scroll_view), 0.5)
 
     def bot_reply(self, original_text, chat_list, scroll_view):
-        app = MDApp.get_running_app()
-        response = f"Hello {app.user_name}, I received: '{original_text}'"
-        self.chat_bubble(response, "bot", chat_list, scroll_view, original_prompt=original_text)
+        if len(original_text.strip()) < 100:
+            self.chat_bubble("Please provide more text!", "bot", chat_list, scroll_view)
+            return
+
+    # 1. Create the bubble and get the label reference
+        base_text = "Hang tight, I'm working on it"
+        thinking_label = self.chat_bubble(f"{base_text}...", "bot", chat_list, scroll_view, original_prompt=original_text)
+
+    # 2. Define the animation logic
+        def shift_dots(dt):
+        # Count current dots
+            curr_dots = thinking_label.text.count(".")
+            if curr_dots >= 3:
+                thinking_label.text = base_text + "."
+            else:
+                thinking_label.text = base_text + "." * (curr_dots + 1)
+
+    # 3. Start the animation (runs every 0.5 seconds)
+    # We store this in a variable so we can stop it later!
+        anim_event = Clock.schedule_interval(shift_dots, 0.5)
+
+        def generate_summary():
+            try:
+                raw_output = summarizer(original_text, max_length=200, min_length=100, do_sample=False)
+                final_text = raw_output[0]['summary_text']
+            except Exception as e:
+                final_text = f"Error: {str(e)}"
+        
+        # 4. Pass the final text AND the animation event to the UI update
+            Clock.schedule_once(lambda dt: update_ui(final_text), 0)
+
+        def update_ui(final_text):
+            # STOP the dot animation
+            anim_event.cancel()
+        
+        # Show the actual AI result
+            if thinking_label:
+                thinking_label.text = final_text
+                thinking_label.texture_update()
+
+        threading.Thread(target=generate_summary, daemon=True).start()
 
     def chat_bubble(self, text, sender, chat_list, scroll_view, original_prompt=""):
         app = MDApp.get_running_app()
@@ -112,7 +155,7 @@ class ChatScreen(MDScreen):
         font_color = (1, 1, 1, 1) if is_user else (0, 0, 0, 1)
         
         user_initial = app.user_name[0].upper() if app.user_name else "U"
-        avatar_letter = user_initial if is_user else "R"
+        avatar_letter = user_initial if is_user else "Re"
         
         row = MDBoxLayout(
             orientation="horizontal", 
@@ -138,6 +181,7 @@ class ChatScreen(MDScreen):
             padding="12dp", radius=[dp(15)]*4
         )
         
+        # Create the label
         lbl = MDLabel(text=text, theme_text_color="Custom", text_color=font_color, adaptive_height=True)
         bubble.add_widget(lbl)
         
@@ -150,7 +194,8 @@ class ChatScreen(MDScreen):
                 icon="comment", 
                 icon_size="20sp",
                 pos_hint={"center_y": 0.5},
-                on_release=lambda x: self.show_feedback_dialog(original_prompt, text)
+                # FIX: We use 'lbl.text' so it captures the LATEST text when clicked, not the initial text
+                on_release=lambda x: self.show_feedback_dialog(original_prompt, lbl.text)
             )
             row.add_widget(avatar)
             row.add_widget(bubble)
@@ -160,6 +205,9 @@ class ChatScreen(MDScreen):
         chat_list.add_widget(row)
         Clock.schedule_once(lambda dt: setattr(scroll_view, 'scroll_y', 0), 0.1)
         Animation(opacity=1, duration=0.3).start(row)
+        
+        # CRITICAL FIX: Return the label widget so bot_reply can update it later
+        return lbl
 
     def show_feedback_dialog(self, prompt_text, bot_response):
         self.feedback_content = FeedbackContent()
