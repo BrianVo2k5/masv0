@@ -1,7 +1,7 @@
 <a name="top"></a><center>
 <div align="center">
-  <img src="https://i.postimg.cc/23Ryh4TH/re.png" alt="Researchr Logo" width="200">
-  <h1>Researchr — MASv0</h1>
+  <img src="https://i.postimg.cc/23Ryh4TH/re.png" alt="Researchr Logo" width="200">
+  <h1>Researchr — MASv0</h1>
 </div>
 
 [![language](https://img.shields.io/badge/language-Python-239120)](https://learn.microsoft.com/ru-ru/dotnet/csharp/tour-of-csharp/overview)
@@ -38,32 +38,31 @@
 
 ## 📝 How to use?
 
-To use the bot, follow these steps:
-# Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)
+**To use the bot, follow these steps:**    
+**Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)**  
+**Ensure Git is installed**  
+**Visit https://git-scm.com to download and install console Git if not already installed**  
 
-# Ensure Git is installed
-# Visit https://git-scm.com to download and install console Git if not already installed
-
-# Clone the repository from GitHub
-```git clone https://github.com/mitternachtslaeufer/bot.news.git```
+**Clone the repository from GitHub**  
+```git clone https://github.com/mitternachtslaeufer/bot.news.git```  
 
 # Navigate to the project directory
 ```cd masv0```
 
-# Setup a Virtual Environment, this keeps the project dependencies isolated from your main computer settings
-# Create the environment
-```python -m venv venv```
+**Setup a Virtual Environment, this keeps the project dependencies isolated from your main computer settings**  
+**Create the environment**  
+```python -m venv venv```  
 
-# Activate it (Windows)
-```.\venv\Scripts\activate```
-# Activate it (macOS/Linux)
-```source venv/bin/activate```
+**Activate it (Windows)**  
+```.\venv\Scripts\activate```  
+**Activate it (macOS/Linux)**  
+```source venv/bin/activate```  
 
-# Once the environment is active, install the libraries required for the bot to work:
-# Use pip to install everything listed in requirements.txt
-```pip install -r requirements.txt```
-# Execute the main script
-```python main.py```
+**Once the environment is active, install the libraries required for the bot to work:**  
+**Use pip to install everything listed in requirements.txt**  
+```pip install -r requirements.txt```  
+**Execute the main script**  
+```python main.py```  
 
 ## 📚 Documentation
 
@@ -78,4 +77,3 @@ For more details about our products, services, or any general information, feel 
 
 We look forward to assisting you and ensuring your experience with our products is successful and enjoyable!
 
-[Back to top](#top)
