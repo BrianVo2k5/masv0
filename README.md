@@ -36,7 +36,7 @@
 
 ## 📝 How to use?
 
-To use the bot, follow these steps:  
+**To use the bot, follow these steps:**    
 **Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)**  
 **Ensure Git is installed**  
 **Visit https://git-scm.com to download and install console Git if not already installed**  
