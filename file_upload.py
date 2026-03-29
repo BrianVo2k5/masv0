@@ -3,6 +3,10 @@ from plyer import filechooser # Imports the plyer tool to open native file explo
 from PyPDF2 import PdfReader # Imports the PDF processing library to read and extract text.
 import threading # Imports the module used to run tasks in the background so the app doesn't freeze.
 from kivy.clock import Clock # Imports the Kivy timer tool to safely send data from a background thread back to the UI.
+from PIL import Image
+import pytesseract
+import cv2
+import numpy as np
 
 class FileUploadManager: 
     def __init__(self, callback):
@@ -47,18 +51,46 @@ class FileUploadManager:
             
     def _unlock(self):
         self.is_processing = False
+    
+    def extract_image_text(self, file_path):
+        # Load image using OpenCV
+        image = cv2.imread(file_path)
+
+        if image is None:
+            raise ValueError("Invalid image file")
+
+        # Convert to grayscale (IMPORTANT for OCR accuracy)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Optional: noise removal / thresholding (improves OCR)
+        gray = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)[1]
+
+        # OCR extraction
+        text = pytesseract.image_to_string(gray)
+
+        return text
 
     def extract_text(self, file_path):
-        if file_path.endswith(".txt"):
-            with open(file_path, "r", encoding="utf-8") as f:
-                return f.read() 
+        ext = os.path.splitext(file_path)[1].lower()
 
-        elif file_path.endswith(".pdf"):
+        if ext == ".txt":
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+
+        elif ext == ".pdf":
             reader = PdfReader(file_path)
             text = ""
             for page in reader.pages:
-                text += (page.extract_text() or "") + "\n"
+                try:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+                except:
+                    continue
             return text
+
+        elif ext in [".png", ".jpg", ".jpeg"]:
+            return self.extract_image_text(file_path)
 
         else:
             raise ValueError("Unsupported file type")
