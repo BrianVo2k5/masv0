@@ -38,13 +38,13 @@
 
 ## 📝 How to use?
 
-**To use the bot, follow these steps:**    
-**Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)**  
-**Ensure Git is installed**  
-**Visit https://git-scm.com to download and install console Git if not already installed**  
+**To use the bot, follow these steps:**
+- Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)
+- Ensure Git is installed
+- Visit https://git-scm.com to download and install console Git if not already installed 
 
 **Clone the repository from GitHub**  
-```git clone https://github.com/mitternachtslaeufer/bot.news.git```  
+```git clone https://github.com/BrianVo2k5/masv0.git```  
 
 # Navigate to the project directory
 ```cd masv0```
@@ -53,15 +53,15 @@
 **Create the environment**  
 ```python -m venv venv```  
 
-**Activate it (Windows)**  
-```.\venv\Scripts\activate```  
-**Activate it (macOS/Linux)**  
+- Activate it (Windows) :
+```.\venv\Scripts\activate```
+- Activate it (macOS/Linux):
 ```source venv/bin/activate```  
 
 **Once the environment is active, install the libraries required for the bot to work:**  
-**Use pip to install everything listed in requirements.txt**  
+- Use pip to install everything listed in requirements.txt**  
 ```pip install -r requirements.txt```  
-**Execute the main script**  
+- Execute the main script 
 ```python main.py```  
 
 ## 📚 Documentation
@@ -76,4 +76,3 @@ For more details about our products, services, or any general information, feel 
 - **Email**: Send us your inquiries or support requests at [104240034@student.vgu.edu.vn](mailto:104240034@student.vgu.edu.vn).
 
 We look forward to assisting you and ensuring your experience with our products is successful and enjoyable!
-
