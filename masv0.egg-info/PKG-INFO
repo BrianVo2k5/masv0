@@ -1,3 +1,18 @@
+Metadata-Version: 2.4
+Name: masv0
+Version: 0.0.3
+Summary: Researchr, or masv0 is a summarization app made by VGU students for DS & AI course.
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: kivy
+Requires-Dist: kivymd
+Requires-Dist: kaki
+Requires-Dist: watchdog
+Requires-Dist: gspread
+Requires-Dist: google-auth
+Requires-Dist: torch
+Requires-Dist: transformers<5
+
 <a name="top"></a><center>
 <div align="center">
   <img src="https://i.postimg.cc/23Ryh4TH/re.png" alt="Researchr Logo" width="200">
@@ -42,7 +57,6 @@
 - Open a terminal (Command Prompt or PowerShell for Windows, Terminal for macOS or Linux)
 - Ensure Git is installed
 - Visit https://git-scm.com to download and install console Git if not already installed 
-- Get tesseract at https://tesseract-ocr.github.io/tessdoc/Installation.html for OCR feature
 
 **Clone the repository from GitHub**  
 ```git clone https://github.com/BrianVo2k5/masv0.git```  
