@@ -41,6 +41,10 @@ class ChatApp(MDApp):
                 name="JetBrains Mono", 
                 fn_regular="app_fonts/JetBrainsMono-Regular.ttf"
             )
+
+        for style in self.theme_cls.font_styles:
+            if style not in ["Icon", "Icons"]:
+                self.theme_cls.font_styles[style][0] = "JetBrains Mono"
         
         Builder.load_file("app.kv")
         
@@ -48,21 +52,44 @@ class ChatApp(MDApp):
         
         return MainRoot()
 
+    def get_manager(self):
+        if self.root and 'screen_manager' in self.root.ids:
+            return self.root.ids.screen_manager
+            
+        for widget in Window.children:
+            for child in widget.walk():
+                if hasattr(child, 'id') and child.id == 'screen_manager':
+                    return child
+                if 'ScreenManager' in str(type(child)):
+                    return child
+        return None
+
     def switch_to_chat(self, name):
         if name.strip():
             self.user_name = name.strip()
         
-        sm = self.root.ids.screen_manager
-        sm.transition.direction = "left"
-        sm.current = "chat"
+        sm = self.get_manager()
+        if sm:
+            sm.transition.direction = "left"
+            sm.current = "chat"
+        
+    def switch_to_settings(self):
+        sm = self.get_manager()
+        if sm:
+            sm.transition.direction = "left"
+            sm.current = "settings"
+
+    def go_back_to_chat(self):
+        sm = self.get_manager()
+        if sm:
+            sm.transition.direction = "right"
+            sm.current = "chat"
 
     def start_reveal_animation(self, dt):
         max_radius = (Window.width**2 + Window.height**2)**0.5
         Animation(reveal_radius=max_radius, duration=2).start(self)
     def open_file(self):
         self.file_manager.open_file_dialog()
-
-
 
     def handle_uploaded_text(self, text):
         print("File loaded!")
@@ -71,16 +98,7 @@ class ChatApp(MDApp):
         chat_list = screen.ids.chat_list
         scroll_view = screen.ids.scroll_view
 
-        preview = text[:500]
-
-        chat_list.add_widget(
-            MDLabel(
-                text=f"[b]📂 Uploaded file:[/b]\n{preview}",
-                markup=True,
-                size_hint_y=None,
-                height="100dp"
-            )
-        )
+        screen.handle_file_upload(text, chat_list, scroll_view)
 
         # auto scroll to newest message
         Clock.schedule_once(lambda dt: scroll_view.scroll_to(chat_list.children[0]))

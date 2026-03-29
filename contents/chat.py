@@ -14,6 +14,7 @@ from kivymd.uix.button import MDIconButton, MDFlatButton
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.selectioncontrol import MDCheckbox
+from kivymd.toast import toast
 # IMPORTANT! BART-LARGE-CNN IS INTRODUCED HERE IN ORDER TO TEST OUT THE FUNCTIONS!
 import torch
 from transformers import pipeline
@@ -104,6 +105,17 @@ class ChatScreen(MDScreen):
         self.chat_bubble(user_text, "user", chat_list, scroll_view)
         Clock.schedule_once(lambda dt: self.bot_reply(user_text, chat_list, scroll_view), 0.5)
 
+    def handle_file_upload(self, extracted_text, chat_list, scroll_view):
+        # 1. Show a self-dismissing pop-up alert
+        toast("📎 Document uploaded successfully!")
+        
+        # 2. Construct the bot's acknowledgment string
+        bot_response = f"Your content has been uploaded:\n\n{extracted_text}"
+        
+        # 3. Send it through your chat_bubble method 
+        self.chat_bubble(bot_response, "bot", chat_list, scroll_view, original_prompt=extracted_text)
+        self.bot_reply(extracted_text, chat_list, scroll_view)
+
     def bot_reply(self, original_text, chat_list, scroll_view):
         if len(original_text.strip()) < 100:
             self.chat_bubble("Please provide more text!", "bot", chat_list, scroll_view)
@@ -154,7 +166,8 @@ class ChatScreen(MDScreen):
         bg_color = (0, 0, 0, 1) if is_user else (0.9, 0.9, 0.9, 1)
         font_color = (1, 1, 1, 1) if is_user else (0, 0, 0, 1)
         
-        user_initial = app.user_name[0].upper() if app.user_name else "U"
+        # Added a safe getattr check in case user_name isn't initialized yet
+        user_initial = getattr(app, 'user_name', "U")[0].upper() if getattr(app, 'user_name', None) else "U"
         avatar_letter = user_initial if is_user else "Re"
         
         row = MDBoxLayout(
@@ -181,21 +194,57 @@ class ChatScreen(MDScreen):
             padding="12dp", radius=[dp(15)]*4
         )
         
-        # Create the label
-        lbl = MDLabel(text=text, theme_text_color="Custom", text_color=font_color, adaptive_height=True)
-        bubble.add_widget(lbl)
+        max_chars = 1200
+        text_chunks = []
+        current_chunk = ""
         
+        # Split by newlines first to preserve intentional paragraph breaks
+        for paragraph in text.split('\n'):
+            if len(paragraph) > max_chars:
+                for word in paragraph.split(' '):
+                    if len(current_chunk) + len(word) > max_chars:
+                        text_chunks.append(current_chunk.strip())
+                        current_chunk = word + " "
+                    else:
+                        current_chunk += word + " "
+                current_chunk += "\n"
+            else:
+                # Normal paragraph size, append as usual
+                if len(current_chunk) + len(paragraph) > max_chars:
+                    text_chunks.append(current_chunk.strip())
+                    current_chunk = paragraph + "\n"
+                else:
+                    current_chunk += paragraph + "\n"
+                    
+        if current_chunk.strip():
+            text_chunks.append(current_chunk.strip())
+            
+        # Create a label for each safe chunk
+        first_lbl = None
+        for chunk in text_chunks:
+            lbl = MDLabel(
+                text=chunk, 
+                theme_text_color="Custom", 
+                text_color=font_color, 
+                adaptive_height=True
+            )
+            bubble.add_widget(lbl)
+            if first_lbl is None:
+                first_lbl = lbl  # Keep track of the first label for bot animation
+
         spacer = Widget(size_hint_x=0.2)
 
         if is_user:
-            row.add_widget(spacer); row.add_widget(bubble); row.add_widget(avatar)
+            row.add_widget(spacer)
+            row.add_widget(bubble)
+            row.add_widget(avatar)
         else:
             feedback_btn = MDIconButton(
                 icon="comment", 
                 icon_size="20sp",
                 pos_hint={"center_y": 0.5},
-                # FIX: We use 'lbl.text' so it captures the LATEST text when clicked, not the initial text
-                on_release=lambda x: self.show_feedback_dialog(original_prompt, lbl.text)
+                # We use 'first_lbl.text' so it captures the LATEST text when clicked
+                on_release=lambda x: self.show_feedback_dialog(original_prompt, first_lbl.text)
             )
             row.add_widget(avatar)
             row.add_widget(bubble)
@@ -206,8 +255,8 @@ class ChatScreen(MDScreen):
         Clock.schedule_once(lambda dt: setattr(scroll_view, 'scroll_y', 0), 0.1)
         Animation(opacity=1, duration=0.3).start(row)
         
-        # CRITICAL FIX: Return the label widget so bot_reply can update it later
-        return lbl
+        # Return the first label widget so bot_reply can update it later
+        return first_lbl
 
     def show_feedback_dialog(self, prompt_text, bot_response):
         self.feedback_content = FeedbackContent()
