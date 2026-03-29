@@ -14,3 +14,6 @@ dependencies = [
     "torch",
     "transformers<5"
 ]
+
+[tool.setuptools.packages.find]
+exclude = ["app_fonts*", "app_textures*", "contents*"]
