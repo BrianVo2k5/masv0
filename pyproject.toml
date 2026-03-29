@@ -1,0 +1,16 @@
+[project]
+name = "masv0"
+version = "0.0.3"
+description = "Researchr, or masv0 is a summarization app made by VGU students for DS & AI course."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "kivy",
+    "kivymd",
+    "kaki",
+    "watchdog",
+    "gspread",
+    "google-auth",
+    "torch",
+    "transformers<5"
+]
