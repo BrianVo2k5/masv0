@@ -1,5 +1,5 @@
 kivy[full]
-kivymd
+kivymd @ https://github.com/kivymd/KivyMD/archive/master.zip
 kaki
 watchdog
 gspread

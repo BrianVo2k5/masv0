@@ -1,0 +1,17 @@
+[project]
+name = "masv0"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10.13"
+dependencies = [
+    "google-auth>=2.49.1",
+    "gspread>=6.2.1",
+    "kaki>=0.1.9",
+    "kivy[full]>=2.3.1",
+    "kivymd>=1.2.0",
+    "watchdog>=6.0.0",
+]
+
+[tool.uv.sources]
+kivymd = { url = "https://github.com/kivymd/KivyMD/archive/master.zip" }
