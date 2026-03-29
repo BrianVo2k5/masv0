@@ -8,6 +8,8 @@ import pytesseract
 import cv2
 import numpy as np
 
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 class FileUploadManager: 
     def __init__(self, callback):
         self.callback = callback
@@ -43,10 +45,13 @@ class FileUploadManager:
             Clock.schedule_once(lambda dt: self.callback(text))
 
         except Exception as e:
-            Clock.schedule_once(lambda dt: self.callback(f"❌ Error: {e}"))
+            # Capture the exception as a string immediately
+            error_message = f"❌ Error: {str(e)}"
+            # Pass the captured string into the lambda
+            Clock.schedule_once(lambda dt: self.callback(error_message))
             
         finally:
-            # 2. RELEASE LOCK (Delayed slightly to catch rogue plyer double-fires)
+            # RELEASE LOCK (Delayed slightly to catch rogue plyer double-fires)
             Clock.schedule_once(lambda dt: self._unlock(), 1)
             
     def _unlock(self):
