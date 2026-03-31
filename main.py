@@ -18,6 +18,7 @@ Factory.register("ChatScreen", cls=ChatScreen)
 
 Window.size = (1600, 900)
 Config.set('graphics', 'resizable', False)
+Config.set('input', 'mouse', 'mouse,disable_multitouch')
 
 class MainRoot(FloatLayout):
     pass
