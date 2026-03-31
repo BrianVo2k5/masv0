@@ -6,6 +6,7 @@ gspread
 google-auth
 torch
 transformers<5
-
-kivy_deps.sdl2
-kivy_deps.glew
+opencv-python
+pytesseract
+plyer
+pypdf2

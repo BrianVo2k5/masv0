@@ -12,7 +12,10 @@ dependencies = [
     "gspread",
     "google-auth",
     "torch",
-    "transformers<5"
+    "transformers<5",
+    "pytesseract",
+    "plyer",
+    "pypdf2"
 ]
 
 [tool.setuptools.packages.find]

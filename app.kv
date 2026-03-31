@@ -110,11 +110,17 @@
                 spacing: "15dp"
 
         MDBoxLayout:
+            id: results_layout
             size_hint_y: None
             height: "90dp"
             padding: "10dp"
             spacing: "10dp"
             md_bg_color: 1, 1, 1, 1
+
+            MDIconButton:
+                icon: "file-upload"
+                pos_hint: {"center_y": .5}
+                on_release: app.open_file()
 
             RelativeLayout:
                 MDTextField:
