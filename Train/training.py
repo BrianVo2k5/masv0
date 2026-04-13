@@ -205,6 +205,11 @@ def main():
         gradient_accumulation_steps=t["gradient_accumulation_steps"],
         per_device_eval_batch_size=t["per_device_eval_batch_size"],
         learning_rate=float(t["learning_rate"]),
+        
+        # Set max grad norm and dtype to fp32
+        max_grad_norm=t.get("max_grad_norm", 1.0), 
+        torch_dtype=dtype,
+        
         lr_scheduler_type=t["lr_scheduler_type"],
         
         # CHANGED: warmup_ratio replaced with warmup_steps
