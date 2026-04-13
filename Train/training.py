@@ -208,7 +208,6 @@ def main():
         
         # Set max grad norm and dtype to fp32
         max_grad_norm=t.get("max_grad_norm", 1.0), 
-        torch_dtype=dtype,
         
         lr_scheduler_type=t["lr_scheduler_type"],
         
