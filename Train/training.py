@@ -1,16 +1,16 @@
 """
-train.py — BART-large LoRA fine-tune on CNN/DailyMail
+training.py — BART-large LoRA fine-tune on CNN/DailyMail
 Reads all settings from train_config.yaml
 
 Checkpoint strategy:
   - Every `save_steps` steps → keep last `keep_last_n_steps` (rolling)
-  - End of every epoch        → always kept (epoch-N/)
+  - End of every epoch        → always kept (epoch-N/) when save_at_epoch_end is true
   - End of training           → final/
 
 Usage:
-    python train.py                        # uses train_config.yaml next to this file
-    python train.py --config my_cfg.yaml   # override config path
-    python train.py --resume ./runs/bart-lora/step-1000   # resume from checkpoint
+    python training.py                        # uses train_config.yaml next to this file
+    python training.py --config my_cfg.yaml   # override config path
+    python training.py --resume ./runs/bart-lora/step-1000   # resume from checkpoint
 """
 
 import argparse
@@ -55,10 +55,11 @@ def load_config(path: str) -> dict:
 # ══════════════════════════════════════════════════════════════════════════════
 
 class RollingCheckpointCallback(TrainerCallback):
-    def __init__(self, output_dir: str, save_steps: int, keep_n: int):
+    def __init__(self, output_dir: str, save_steps: int, keep_n: int, save_at_epoch_end: bool = True):
         self.output_dir = Path(output_dir)
         self.save_steps = save_steps
         self.keep_n = keep_n
+        self.save_at_epoch_end = save_at_epoch_end
         self._step_checkpoints: list[Path] = []
 
     def on_save(self, args, state: TrainerState, control: TrainerControl, **kwargs):
@@ -81,6 +82,8 @@ class RollingCheckpointCallback(TrainerCallback):
                 log.info(f"Removed old step checkpoint: {oldest}")
 
     def on_epoch_end(self, args, state: TrainerState, control: TrainerControl, **kwargs):
+        if not self.save_at_epoch_end:
+            return
         epoch = int(state.epoch)
         epoch_dir = self.output_dir / f"epoch-{epoch}"
         if self._step_checkpoints:
@@ -234,6 +237,7 @@ def main():
         output_dir=t["output_dir"],
         save_steps=ck["save_steps"],
         keep_n=ck["keep_last_n_steps"],
+        save_at_epoch_end=ck.get("save_at_epoch_end", True),
     )
 
     # ── Trainer ────────────────────────────────────────────────────────────

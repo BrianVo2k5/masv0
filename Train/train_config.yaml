@@ -1,4 +1,4 @@
-# train_config.yaml — edit this, train.py reads it at startup
+# train_config.yaml — edit this, training.py reads it at startup
 
 model:
   model_id: "facebook/bart-large-cnn"

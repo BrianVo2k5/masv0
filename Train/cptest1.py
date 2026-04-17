@@ -8,9 +8,14 @@ from tqdm import tqdm
 
 def main(args):
     print(f"Loading base model and checkpoint from: {args.checkpoint}...")
-    
-    # 1. Load models
-    base_model_id = "facebook/bart-large"
+
+    # 1. Load models — read the base model from the adapter config so the
+    # tester always matches whatever was used at training time.
+    from peft import PeftConfig
+    peft_config = PeftConfig.from_pretrained(args.checkpoint)
+    base_model_id = peft_config.base_model_name_or_path
+    print(f"Resolved base model from adapter config: {base_model_id}")
+
     tokenizer = AutoTokenizer.from_pretrained(base_model_id)
     base_model = AutoModelForSeq2SeqLM.from_pretrained(base_model_id, device_map="auto")
     model = PeftModel.from_pretrained(base_model, args.checkpoint)
