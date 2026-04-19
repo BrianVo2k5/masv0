@@ -81,7 +81,7 @@ def preprocess_factory(tokenizer, cfg: dict):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="train_config.yaml")
-    # Resume argument removed to prevent accidental loading of bad optimizer states
+    parser.add_argument("--resume", default=None, help="Path to checkpoint dir to resume from")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -186,7 +186,7 @@ def main():
     )
 
     log.info("Starting fresh training run …")
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume)
 
     # ── Final save ─────────────────────────────────────────────────────────
     final_dir = Path(t["output_dir"]) / "final"
