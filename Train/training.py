@@ -54,47 +54,27 @@ def load_config(path: str) -> dict:
 # Keeps last N step-checkpoints; epoch checkpoints are never deleted.
 # ══════════════════════════════════════════════════════════════════════════════
 
-class RollingCheckpointCallback(TrainerCallback):
-    def __init__(self, output_dir: str, save_steps: int, keep_n: int, save_at_epoch_end: bool = True):
+class EpochCheckpointCallback(TrainerCallback):
+    def __init__(self, output_dir: str, save_at_epoch_end: bool = True):
         self.output_dir = Path(output_dir)
-        self.save_steps = save_steps
-        self.keep_n = keep_n
         self.save_at_epoch_end = save_at_epoch_end
-        self._step_checkpoints: list[Path] = []
-
-    def on_save(self, args, state: TrainerState, control: TrainerControl, **kwargs):
-        step = state.global_step
-        ckpt_dir = self.output_dir / f"step-{step}"
-
-        # Trainer saves to checkpoint-{step}; copy to our named scheme
-        trainer_dir = self.output_dir / f"checkpoint-{step}"
-        if trainer_dir.exists() and not ckpt_dir.exists():
-            shutil.copytree(trainer_dir, ckpt_dir)
-            log.info(f"Step checkpoint saved → {ckpt_dir}")
-
-        self._step_checkpoints.append(ckpt_dir)
-
-        # Prune oldest beyond keep_n
-        while len(self._step_checkpoints) > self.keep_n:
-            oldest = self._step_checkpoints.pop(0)
-            if oldest.exists():
-                shutil.rmtree(oldest)
-                log.info(f"Removed old step checkpoint: {oldest}")
 
     def on_epoch_end(self, args, state: TrainerState, control: TrainerControl, **kwargs):
         if not self.save_at_epoch_end:
             return
+        
         epoch = int(state.epoch)
         epoch_dir = self.output_dir / f"epoch-{epoch}"
-        if self._step_checkpoints:
-            src = self._step_checkpoints[-1]
-            if src.exists() and not epoch_dir.exists():
-                shutil.copytree(src, epoch_dir)
-                log.info(f"Epoch checkpoint saved → {epoch_dir}")
+        step = state.global_step
+        
+        # Grab the checkpoint the Trainer just naturally saved
+        latest_ckpt = self.output_dir / f"checkpoint-{step}"
+        
+        if latest_ckpt.exists() and not epoch_dir.exists():
+            shutil.copytree(latest_ckpt, epoch_dir)
+            log.info(f"Epoch {epoch} checkpoint locked in → {epoch_dir}")
         else:
-            # Epoch ended before first save_steps hit — force a save
             control.should_save = True
-            log.info(f"Epoch {epoch} ended before first step save — forcing save")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
