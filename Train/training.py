@@ -3,19 +3,16 @@ training.py — BART-large LoRA fine-tune on CNN/DailyMail
 Reads all settings from train_config.yaml
 
 Checkpoint strategy:
-  - Every `save_steps` steps → keep last `keep_last_n_steps` (rolling)
-  - End of every epoch        → always kept (epoch-N/) when save_at_epoch_end is true
-  - End of training           → final/
+  - Every `save_steps` steps → kept natively by Hugging Face Trainer.
+  - End of training          → final/
 
 Usage:
     python training.py                        # uses train_config.yaml next to this file
     python training.py --config my_cfg.yaml   # override config path
-    python training.py --resume ./runs/bart-lora/step-1000   # resume from checkpoint
 """
 
 import argparse
 import logging
-import shutil
 from pathlib import Path
 
 import torch
@@ -28,9 +25,6 @@ from transformers import (
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
-    TrainerCallback,
-    TrainerControl,
-    TrainerState,
     set_seed,
 )
 
@@ -47,34 +41,6 @@ def load_config(path: str) -> dict:
         cfg = yaml.safe_load(f)
     log.info(f"Loaded config from {path}")
     return cfg
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Rolling checkpoint callback
-# Keeps last N step-checkpoints; epoch checkpoints are never deleted.
-# ══════════════════════════════════════════════════════════════════════════════
-
-class EpochCheckpointCallback(TrainerCallback):
-    def __init__(self, output_dir: str, save_at_epoch_end: bool = True):
-        self.output_dir = Path(output_dir)
-        self.save_at_epoch_end = save_at_epoch_end
-
-    def on_epoch_end(self, args, state: TrainerState, control: TrainerControl, **kwargs):
-        if not self.save_at_epoch_end:
-            return
-        
-        epoch = int(state.epoch)
-        epoch_dir = self.output_dir / f"epoch-{epoch}"
-        step = state.global_step
-        
-        # Grab the checkpoint the Trainer just naturally saved
-        latest_ckpt = self.output_dir / f"checkpoint-{step}"
-        
-        if latest_ckpt.exists() and not epoch_dir.exists():
-            shutil.copytree(latest_ckpt, epoch_dir)
-            log.info(f"Epoch {epoch} checkpoint locked in → {epoch_dir}")
-        else:
-            control.should_save = True
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -115,7 +81,7 @@ def preprocess_factory(tokenizer, cfg: dict):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="train_config.yaml")
-    parser.add_argument("--resume", default=None, help="Path to checkpoint dir to resume from")
+    # Resume argument removed to prevent accidental loading of bad optimizer states
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -188,36 +154,24 @@ def main():
         gradient_accumulation_steps=t["gradient_accumulation_steps"],
         per_device_eval_batch_size=t["per_device_eval_batch_size"],
         learning_rate=float(t["learning_rate"]),
-        
-        # Set max grad norm and dtype to fp32
         max_grad_norm=t.get("max_grad_norm", 1.0), 
-        
         lr_scheduler_type=t["lr_scheduler_type"],
-        
-        # CHANGED: warmup_ratio replaced with warmup_steps
         warmup_steps=t.get("warmup_steps", 100), 
-        
         weight_decay=t["weight_decay"],
         bf16=t["bf16"],
         fp16=t["fp16"],
         dataloader_pin_memory=t["dataloader_pin_memory"],
-        
-        # CHANGED: evaluation_strategy replaced with eval_strategy
         eval_strategy=t.get("eval_strategy", t.get("evaluation_strategy", "no")),
         
+        # Native save configuration
         save_strategy="steps",
         save_steps=ck["save_steps"],
+        save_total_limit=None,          # explicitly keep ALL checkpoints
+        
         logging_steps=t["logging_steps"],
         predict_with_generate=False,    
         report_to="none",               
         seed=t["seed"],
-    )
-
-    rolling_cb = RollingCheckpointCallback(
-        output_dir=t["output_dir"],
-        save_steps=ck["save_steps"],
-        keep_n=ck["keep_last_n_steps"],
-        save_at_epoch_end=ck.get("save_at_epoch_end", True),
     )
 
     # ── Trainer ────────────────────────────────────────────────────────────
@@ -226,22 +180,17 @@ def main():
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=val_ds,
-        
-        # CHANGED: tokenizer replaced with processing_class
         processing_class=tokenizer, 
-        
         data_collator=collator,
-        callbacks=[rolling_cb],
+        # callbacks removed completely
     )
 
-    log.info("Starting training …")
-    trainer.train(resume_from_checkpoint=args.resume)
+    log.info("Starting fresh training run …")
+    trainer.train()
 
     # ── Final save ─────────────────────────────────────────────────────────
     final_dir = Path(t["output_dir"]) / "final"
     trainer.save_model(str(final_dir))
-    
-    # We still explicitly save the tokenizer locally to ensure the vocabulary writes out correctly.
     tokenizer.save_pretrained(str(final_dir))
     log.info(f"Training complete. Final model → {final_dir}")
 
