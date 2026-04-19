@@ -166,7 +166,7 @@ def main():
         # Native save configuration
         save_strategy="steps",
         save_steps=ck["save_steps"],
-        save_total_limit=10,          # Keep the last 10 checkpoints
+        save_total_limit=None,          # explicitly keep ALL checkpoints
         
         logging_steps=t["logging_steps"],
         predict_with_generate=False,    
