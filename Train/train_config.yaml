@@ -5,12 +5,13 @@ model:
   torch_dtype: "fp32"          # fp32 | fp16 | bfloat16
 
 dataset:
-  name: "cnn_dailymail"
-  version: "3.0.0"
+  name: "xsum"
   train_split: "train"
   val_split: "validation"
+  text_column: "document"      # XSum uses 'document'
+  summary_column: "summary"    # XSum uses 'summary'
   max_input_len: 1024
-  max_target_len: 128
+  max_target_len: 64           # Lowered from 128 because XSum targets are 1 sentence
   num_workers: 4
 
 lora:

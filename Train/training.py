@@ -51,15 +51,19 @@ def preprocess_factory(tokenizer, cfg: dict):
     max_in  = cfg["dataset"]["max_input_len"]
     max_out = cfg["dataset"]["max_target_len"]
 
+    # Read column names from config, fallback to CNN/DM defaults just in case
+    text_col = cfg["dataset"].get("text_column", "article")
+    sum_col  = cfg["dataset"].get("summary_column", "highlights")
+
     def preprocess(batch):
         inputs = tokenizer(
-            batch["article"],
+            batch[text_col],
             max_length=max_in,
             truncation=True,
             padding=False,          # DataCollator handles padding per-batch
         )
         targets = tokenizer(
-            text_target=batch["highlights"],
+            batch[sum_col],
             max_length=max_out,
             truncation=True,
             padding=False,
