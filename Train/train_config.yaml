@@ -6,7 +6,6 @@ model:
 
 dataset:
   name: "xsum"
-  version: "1.2.0"
   train_split: "train"
   val_split: "validation"
   text_column: "document"      # XSum uses 'document'

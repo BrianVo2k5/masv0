@@ -1,5 +1,5 @@
 """
-training.py — BART-large LoRA fine-tune on CNN/DailyMail
+training.py — BART-large LoRA fine-tune on XSUM
 Reads all settings from train_config.yaml
 
 Checkpoint strategy:
@@ -51,9 +51,9 @@ def preprocess_factory(tokenizer, cfg: dict):
     max_in  = cfg["dataset"]["max_input_len"]
     max_out = cfg["dataset"]["max_target_len"]
 
-    # Read column names from config, fallback to CNN/DM defaults just in case
-    text_col = cfg["dataset"].get("text_column", "article")
-    sum_col  = cfg["dataset"].get("summary_column", "highlights")
+    # Read column names from config, fallback to XSUM defaults just in case
+    text_col = cfg["dataset"].get("text_column", "document")
+    sum_col  = cfg["dataset"].get("summary_column", "summary")
 
     def preprocess(batch):
         inputs = tokenizer(
@@ -118,8 +118,8 @@ def main():
 
     # ── Dataset ────────────────────────────────────────────────────────────
     ds_cfg = cfg["dataset"]
-    log.info("Loading CNN/DailyMail …")
-    raw = load_dataset(ds_cfg["name"], ds_cfg["version"])
+    log.info("Loading XSUM …")
+    raw = load_dataset(ds_cfg["name"], ds_cfg.get("version") or None)
     train_ds = raw[ds_cfg["train_split"]]
     val_ds   = raw[ds_cfg["val_split"]]
 
