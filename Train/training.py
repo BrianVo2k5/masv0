@@ -101,7 +101,7 @@ def main():
     tokenizer = BartTokenizer.from_pretrained(model_id)
 
     log.info(f"Loading model: {model_id} ({dtype})")
-    model = BartForConditionalGeneration.from_pretrained(model_id, torch_dtype=dtype)
+    model = BartForConditionalGeneration.from_pretrained(model_id, dtype=dtype)
 
     # ── LoRA ───────────────────────────────────────────────────────────────
     lora_cfg = cfg["lora"]
