@@ -1,5 +1,5 @@
 """
-training.py — BART-large LoRA fine-tune on XSUM
+training.py — BART-base LoRA fine-tune on XSUM
 Reads all settings from train_config.yaml
 
 Checkpoint strategy:
