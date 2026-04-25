@@ -19,9 +19,27 @@ from kivy.core.clipboard import Clipboard
 from kivymd.toast import toast
 # IMPORTANT! BART-LARGE-CNN IS INTRODUCED HERE IN ORDER TO TEST OUT THE FUNCTIONS!
 import torch
-from transformers import pipeline
-summarizer = pipeline("summarization",model="facebook/bart-large-cnn")
+from transformers import pipeline, BartForConditionalGeneration, BartTokenizer
 
+# 1. Define the base model
+# (Note: Your previous logs showed it looking for "facebook/bart-base". 
+# Make sure this matches exactly what you trained your weights on!)
+base_model_name = "facebook/bart-base" 
+
+# 2. Load the tokenizer associated with the base model
+tokenizer = BartTokenizer.from_pretrained(base_model_name)
+
+# 3. Load the base model architecture first
+model = BartForConditionalGeneration.from_pretrained(base_model_name)
+
+# 4. Load your custom merged weights into a dictionary
+custom_weights = torch.load("Train/runs/bart-lora/bart-merged-weights-2000.pt", map_location=torch.device('cpu'))
+
+# 5. Inject your custom weights into the base model
+model.load_state_dict(custom_weights)
+
+# 6. Initialize the pipeline using your custom model and the tokenizer
+summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
 
 class FeedbackContent(MDBoxLayout):
     def __init__(self, **kwargs):
@@ -104,7 +122,6 @@ class ChatScreen(MDScreen):
             Clipboard.copy(instance.text)
             
             # Optional: Show a small toast/notification so the user knows it worked
-            from kivymd.toast import toast
             toast("Text copied to clipboard")
 
     def send_message(self, text_field, chat_list, scroll_view):
@@ -127,21 +144,20 @@ class ChatScreen(MDScreen):
             self.chat_bubble("Please provide more text!", "bot", chat_list, scroll_view)
             return
 
-    # 1. Create the bubble and get the label reference
+        # 1. Create the bubble and get the label reference
         base_text = "Hang tight, I'm working on it"
         thinking_label = self.chat_bubble(f"{base_text}...", "bot", chat_list, scroll_view, original_prompt=original_text)
 
-    # 2. Define the animation logic
+        # 2. Define the animation logic
         def shift_dots(dt):
-        # Count current dots
+            # Count current dots
             curr_dots = thinking_label.text.count(".")
             if curr_dots >= 3:
                 thinking_label.text = base_text + "."
             else:
                 thinking_label.text = base_text + "." * (curr_dots + 1)
 
-    # 3. Start the animation (runs every 0.5 seconds)
-    # We store this in a variable so we can stop it later!
+        # 3. Start the animation (runs every 0.5 seconds)
         anim_event = Clock.schedule_interval(shift_dots, 0.5)
 
         def generate_summary():
@@ -155,14 +171,14 @@ class ChatScreen(MDScreen):
             except Exception as e:
                 final_text = f"Error: {str(e)}"
         
-        # 4. Pass the final text AND the animation event to the UI update
+            # 4. Pass the final text AND the animation event to the UI update
             Clock.schedule_once(lambda dt: update_ui(final_text), 0)
 
         def update_ui(final_text):
             # STOP the dot animation
             anim_event.cancel()
         
-        # Show the actual AI result
+            # Show the actual AI result
             if thinking_label:
                 thinking_label.text = final_text
                 thinking_label.texture_update()
@@ -245,46 +261,47 @@ class ChatScreen(MDScreen):
                 theme_text_color="Custom", 
                 text_color=font_color, 
                 adaptive_height=True,
-                # Allow the label to respond to touches
                 allow_selection=True 
             )
             
-            # This makes the label copy its own text when clicked
             lbl.bind(on_touch_down=lambda instance, touch: self.on_label_click(instance, touch))
             
             bubble.add_widget(lbl) 
-            bubble_wrapper.add_widget(bubble)
 
             if first_lbl is None:
                 first_lbl = lbl
 
-            if not is_user:
-                current_time = datetime.now().strftime("%I:%M %p") # Example: 02:45 PM
-                word_count = len(text.split())
+        # We add the populated bubble to the wrapper OUTSIDE the loop unconditionally
+        bubble_wrapper.add_widget(bubble)
+
+        # Only run this once per message, after the loop finishes
+        if not is_user:
+            current_time = datetime.now().strftime("%I:%M %p") # Example: 02:45 PM
+            word_count = len(text.split())
+            
             # Initial creation (will be overwritten if text streams)
-                info_label = MDLabel(
-                    text=f"{word_count} words • {current_time}",
-                    theme_text_color="Hint",
-                    font_style="Caption",
-                    adaptive_height=True,
-                    halign="left",
-                    padding=("5dp", "0dp", "0dp", "0dp")
-                )
-                bubble_wrapper.add_widget(info_label)
+            info_label = MDLabel(
+                text=f"{word_count} words • {current_time}",
+                theme_text_color="Hint",
+                font_style="Caption",
+                adaptive_height=True,
+                halign="left",
+                padding=("5dp", "0dp", "0dp", "0dp")
+            )
+            bubble_wrapper.add_widget(info_label)
 
-            # THE FIX: Create a function to update the count and bind it to the text label
-                if first_lbl:
-                    def update_metadata(instance, new_text):
-                        if new_text.lower() not in ["thinking...", "..."]: 
-                            # Calculate live word count
-                            live_word_count = len(new_text.split())
-                        
+            # Create a function to update the count and bind it to the text label
+            if first_lbl:
+                def update_metadata(instance, new_text):
+                    if new_text.lower() not in ["thinking...", "..."]: 
+                        # Calculate live word count
+                        live_word_count = len(new_text.split())
                         # Update the label text
-                            info_label.text = f"{live_word_count} words • {current_time}" # CHANGED HERE
-                
-                    first_lbl.bind(text=update_metadata)
+                        info_label.text = f"{live_word_count} words • {current_time}" 
+            
+                first_lbl.bind(text=update_metadata)
 
-            spacer = Widget(size_hint_x=0.2)
+        spacer = Widget(size_hint_x=0.2)
 
         if is_user:
             row.add_widget(spacer)
