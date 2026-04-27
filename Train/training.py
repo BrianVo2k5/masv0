@@ -1,5 +1,5 @@
 """
-training.py — BART-base LoRA fine-tune on XSUM
+training.py — LED LoRA fine-tune on CNN/DailyMail
 Reads all settings from train_config.yaml
 
 Checkpoint strategy:
@@ -20,8 +20,8 @@ import yaml
 from datasets import load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import (
-    BartForConditionalGeneration,
-    BartTokenizer,
+    LEDForConditionalGeneration,
+    LEDTokenizer,
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
@@ -51,7 +51,7 @@ def preprocess_factory(tokenizer, cfg: dict):
     max_in  = cfg["dataset"]["max_input_len"]
     max_out = cfg["dataset"]["max_target_len"]
 
-    # Read column names from config, fallback to XSUM defaults just in case
+    # Read column names from config, fallback to CNN/DailyMail defaults just in case
     text_col = cfg["dataset"].get("text_column", "document")
     sum_col  = cfg["dataset"].get("summary_column", "summary")
 
@@ -68,6 +68,16 @@ def preprocess_factory(tokenizer, cfg: dict):
             truncation=True,
             padding=False,
         )
+
+        # ─── THE LED FIX: Add Global Attention Mask ──────────────────────────
+        # Places a '1' on the very first token of every sequence, and '0' everywhere else
+        global_attention_mask = [
+            [1] + [0] * (len(seq) - 1) 
+            for seq in inputs["input_ids"]
+        ]
+        inputs["global_attention_mask"] = global_attention_mask
+        # ───────────────────────────────────────────────────────────────────────
+
         labels = [
             [(t if t != tokenizer.pad_token_id else -100) for t in seq]
             for seq in targets["input_ids"]
@@ -98,10 +108,10 @@ def main():
     # ── Tokenizer & model ──────────────────────────────────────────────────
     model_id = cfg["model"]["model_id"]
     log.info(f"Loading tokenizer: {model_id}")
-    tokenizer = BartTokenizer.from_pretrained(model_id)
+    tokenizer = LEDTokenizer.from_pretrained(model_id)
 
     log.info(f"Loading model: {model_id} ({dtype})")
-    model = BartForConditionalGeneration.from_pretrained(model_id, dtype=dtype)
+    model = LEDForConditionalGeneration.from_pretrained(model_id, dtype=dtype)
 
     # ── LoRA ───────────────────────────────────────────────────────────────
     lora_cfg = cfg["lora"]
@@ -118,7 +128,7 @@ def main():
 
     # ── Dataset ────────────────────────────────────────────────────────────
     ds_cfg = cfg["dataset"]
-    log.info("Loading XSUM …")
+    log.info("Loading CNN/DailyMail …")
     raw = load_dataset(ds_cfg["name"], ds_cfg.get("version") or None)
     train_ds = raw[ds_cfg["train_split"]]
     val_ds   = raw[ds_cfg["val_split"]]
