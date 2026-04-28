@@ -68,16 +68,6 @@ def preprocess_factory(tokenizer, cfg: dict):
             truncation=True,
             padding=False,
         )
-
-        # ─── THE LED FIX: Add Global Attention Mask ──────────────────────────
-        # Places a '1' on the very first token of every sequence, and '0' everywhere else
-        global_attention_mask = [
-            [1] + [0] * (len(seq) - 1) 
-            for seq in inputs["input_ids"]
-        ]
-        inputs["global_attention_mask"] = global_attention_mask
-        # ───────────────────────────────────────────────────────────────────────
-
         labels = [
             [(t if t != tokenizer.pad_token_id else -100) for t in seq]
             for seq in targets["input_ids"]
