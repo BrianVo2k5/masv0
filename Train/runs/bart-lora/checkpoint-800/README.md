@@ -1,8 +1,8 @@
 ---
-base_model: facebook/bart-base
+base_model: allenai/led-base-16384
 library_name: peft
 tags:
-- base_model:adapter:facebook/bart-base
+- base_model:adapter:allenai/led-base-16384
 - lora
 - transformers
 ---

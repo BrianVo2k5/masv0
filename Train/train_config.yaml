@@ -11,7 +11,7 @@ dataset:
   val_split: "validation"
   text_column: "article"       # CNN/DailyMail uses 'article'
   summary_column: "highlights" # CNN/DailyMail uses 'highlights'
-  max_input_len: 1024          # (Change to 16384 here if you are using LED!)
+  max_input_len: 16384          # (Change to 16384 here if you are using LED!)
   max_target_len: 128          # Raised back up for multi-sentence bullet points
   num_workers: 4
 
@@ -26,8 +26,6 @@ lora:
     - "v_proj"
     - "k_proj"
     - "out_proj"
-    - "fc1"
-    - "fc2"
 
 training:
   output_dir: "./runs/bart-lora"

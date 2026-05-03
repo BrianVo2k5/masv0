@@ -7,7 +7,7 @@
   "errors": "replace",
   "is_local": false,
   "mask_token": "<mask>",
-  "model_max_length": 1000000000000000019884624838656,
+  "model_max_length": 16384,
   "pad_token": "<pad>",
   "sep_token": "</s>",
   "tokenizer_class": "RobertaTokenizer",

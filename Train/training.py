@@ -144,7 +144,7 @@ def main():
         tokenizer,
         model=model,
         label_pad_token_id=-100,
-        pad_to_multiple_of=8,
+        pad_to_multiple_of=1024,
     )
 
     # ── TrainingArguments ──────────────────────────────────────────────────
