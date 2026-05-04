@@ -19,24 +19,16 @@ from kivy.core.clipboard import Clipboard
 from kivymd.toast import toast
 # IMPORTANT! BART-LARGE-CNN IS INTRODUCED HERE IN ORDER TO TEST OUT THE FUNCTIONS!
 import torch
-from transformers import pipeline, BartForConditionalGeneration, BartTokenizer
+from transformers import pipeline, LEDForConditionalGeneration, LEDTokenizer
 
-# 1. Define the base model
-# (Note: Your previous logs showed it looking for "facebook/bart-base". 
-# Make sure this matches exactly what you trained your weights on!)
-base_model_name = "facebook/bart-base" 
+base_model_name = "allenai/led-base-16384"
 
-# 2. Load the tokenizer associated with the base model
-tokenizer = BartTokenizer.from_pretrained(base_model_name)
+tokenizer = LEDTokenizer.from_pretrained(base_model_name)
 
-# 3. Load the base model architecture first
-model = BartForConditionalGeneration.from_pretrained(base_model_name)
+model = LEDForConditionalGeneration.from_pretrained(base_model_name)
 
-# 4. Load your custom merged weights into a dictionary
-custom_weights = torch.load("Train/runs/bart-lora/bart-merged-weights-2000.pt", map_location=torch.device('cpu'))
-
-# 5. Inject your custom weights into the base model
-model.load_state_dict(custom_weights)
+custom_weights = torch.load("Train/runs/bart-lora/led_lora_merged.pt", map_location=torch.device('cpu'))
+model.load_state_dict(custom_weights["model_state_dict"])
 
 # 6. Initialize the pipeline using your custom model and the tokenizer
 summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
