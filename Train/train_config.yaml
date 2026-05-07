@@ -1,26 +1,27 @@
 # train_config.yaml — edit this, training.py reads it at startup
 
 model:
-  model_id: "allenai/led-base-16384"  # LED is designed for long documents
-  torch_dtype: "fp32"          # fp32 | fp16 | bfloat16
+  model_id: "facebook/bart-base"
+  torch_dtype: "bfloat16"       # model weights in bf16 (~278 MB vs ~556 MB fp32)
+                                 # bf16/fp16 training flags below must stay false on MPS —
+                                 # those are CUDA-only switches; weight dtype is set here instead
 
 dataset:
-  name: "cnn_dailymail"
-  version: "3.0.0"             # Required subset version for CNN/DailyMail
+  name: "xsum"
   train_split: "train"
   val_split: "validation"
-  text_column: "article"       # CNN/DailyMail uses 'article'
-  summary_column: "highlights" # CNN/DailyMail uses 'highlights'
-  max_input_len: 16384          # (Change to 16384 here if you are using LED!)
-  max_target_len: 128          # Raised back up for multi-sentence bullet points
-  num_workers: 4
+  text_column: "document"
+  summary_column: "summary"
+  max_input_len: 1024            # xsum articles avg ~580 tokens; 1024 covers the long tail
+  max_target_len: 64             # xsum summaries avg ~30 tokens; 64 is a safe ceiling
+  num_workers: 4                 # used for dataset.map() preprocessing workers
+  max_eval_samples: 1000         # cap eval set so generate-based evaluation stays fast per epoch
 
 lora:
-  r: 8
-  lora_alpha: 16                   # usually 2×r
+  r: 16
+  lora_alpha: 32                 # 2×r
   lora_dropout: 0.05
   bias: "none"
-  # which linear layers to target in BART encoder+decoder
   target_modules:
     - "q_proj"
     - "v_proj"
@@ -28,24 +29,34 @@ lora:
     - "out_proj"
 
 training:
-  output_dir: "./runs/bart-lora"
+  output_dir: "./runs/bart-lora-xsum"
   num_train_epochs: 3
-  per_device_train_batch_size: 4
-  gradient_accumulation_steps: 8   # effective batch = 32
+  # MPS pipelines better with smaller individual kernels — batch=8 at seq=1024 fits the
+  # M1 attention tile size much better than batch=32 (which creates 32×12×1024² per layer).
+  # Effective batch stays 64 via accumulation.
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 8    # effective batch = 64
   per_device_eval_batch_size: 16
-  learning_rate: 2.0e-5            # Slower than 5.0e-5 which failed at step 950...
-  max_grad_norm: 1.0               # Prevent NaN
-  lr_scheduler_type: "linear"
-  warmup_steps: 800                # More time for BART-large to adjust to LoRA
+  learning_rate: 3.0e-5
+  max_grad_norm: 1.0
+  lr_scheduler_type: "cosine"       # smoother late-training decay; reduces hallucination drift
+  warmup_steps: 500                 # ~5% of total steps for 3 epochs on xsum
   weight_decay: 0.01
-  bf16: false
-  fp16: false
-  dataloader_pin_memory: false     # must be false on MPS
+  label_smoothing_factor: 0.1       # softens targets → prevents overconfidence → less repetition
+  bf16: false                       # CUDA-only — keep false on MPS
+  fp16: false                       # CUDA-only — keep false on MPS
+  dataloader_pin_memory: false      # must be false on MPS
+  dataloader_num_workers: 0         # must be 0 on MPS — tensors can't be shared across processes
+  group_by_length: true             # batch similar-length docs together → ~30% less padding waste
   eval_strategy: "epoch"
+  predict_with_generate: true       # generate real summaries at eval → ROUGE scores
+                                    # this is what catches a model gaming teacher-forcing loss
+  generation_max_length: 64
+  eval_accumulation_steps: 8        # accumulate predictions before moving to CPU — avoids eval OOM
   logging_steps: 50
   seed: 42
 
 checkpointing:
-  save_steps: 200                  # save temp checkpoint every N steps
-  keep_last_n_steps: 3             # how many step-checkpoints to keep
-  save_at_epoch_end: true          # always keep full epoch checkpoints
+  save_steps: 200
+  keep_last_n_steps: 3
+  save_at_epoch_end: true

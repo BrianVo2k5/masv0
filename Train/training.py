@@ -1,27 +1,29 @@
 """
-training.py — LED LoRA fine-tune on CNN/DailyMail
+training.py — BART LoRA fine-tune on XSum
 Reads all settings from train_config.yaml
-
-Checkpoint strategy:
-  - Every `save_steps` steps → kept natively by Hugging Face Trainer.
-  - End of training          → final/
 
 Usage:
     python training.py                        # uses train_config.yaml next to this file
     python training.py --config my_cfg.yaml   # override config path
+    python training.py --resume ./runs/ckpt   # resume from a checkpoint
+
+Requires:
+    pip install evaluate rouge_score
 """
 
 import argparse
 import logging
 from pathlib import Path
 
+import numpy as np
 import torch
 import yaml
+import evaluate as hf_evaluate
 from datasets import load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import (
-    LEDForConditionalGeneration,
-    LEDTokenizer,
+    AutoModelForSeq2SeqLM,
+    AutoTokenizer,
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
@@ -30,6 +32,8 @@ from transformers import (
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
+
+rouge_metric = hf_evaluate.load("rouge")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -44,35 +48,65 @@ def load_config(path: str) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ROUGE metrics — only meaningful because predict_with_generate=True
+# Teacher-forcing loss alone cannot catch a model gaming the objective.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def make_compute_metrics(tokenizer):
+    def compute_metrics(eval_preds):
+        preds, labels = eval_preds
+        if isinstance(preds, tuple):
+            preds = preds[0]
+
+        decoded_preds  = tokenizer.batch_decode(preds, skip_special_tokens=True)
+        labels         = np.where(labels != -100, labels, tokenizer.pad_token_id)
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+        decoded_preds  = [p.strip() for p in decoded_preds]
+        decoded_labels = [l.strip() for l in decoded_labels]
+
+        result = rouge_metric.compute(
+            predictions=decoded_preds,
+            references=decoded_labels,
+            use_stemmer=True,
+        )
+        return {k: round(v * 100, 2) for k, v in result.items()}
+
+    return compute_metrics
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Dataset preprocessing
 # ══════════════════════════════════════════════════════════════════════════════
 
 def preprocess_factory(tokenizer, cfg: dict):
-    max_in  = cfg["dataset"]["max_input_len"]
-    max_out = cfg["dataset"]["max_target_len"]
-
-    # Read column names from config, fallback to CNN/DailyMail defaults just in case
+    max_in   = cfg["dataset"]["max_input_len"]
+    max_out  = cfg["dataset"]["max_target_len"]
     text_col = cfg["dataset"].get("text_column", "document")
     sum_col  = cfg["dataset"].get("summary_column", "summary")
 
     def preprocess(batch):
+        # Collapse stray newlines — XSum docs can have them from BBC HTML parsing
+        documents = [" ".join(text.split()) for text in batch[text_col]]
+        summaries = [" ".join(text.split()) for text in batch[sum_col]]
+
         inputs = tokenizer(
-            batch[text_col],
+            documents,
             max_length=max_in,
             truncation=True,
-            padding=False,          # DataCollator handles padding per-batch
+            padding=False,          # collator handles per-batch padding
         )
         targets = tokenizer(
-            batch[sum_col],
+            summaries,
             max_length=max_out,
             truncation=True,
             padding=False,
         )
-        labels = [
+
+        inputs["labels"] = [
             [(t if t != tokenizer.pad_token_id else -100) for t in seq]
             for seq in targets["input_ids"]
         ]
-        inputs["labels"] = labels
         return inputs
 
     return preprocess
@@ -98,10 +132,10 @@ def main():
     # ── Tokenizer & model ──────────────────────────────────────────────────
     model_id = cfg["model"]["model_id"]
     log.info(f"Loading tokenizer: {model_id}")
-    tokenizer = LEDTokenizer.from_pretrained(model_id)
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
 
     log.info(f"Loading model: {model_id} ({dtype})")
-    model = LEDForConditionalGeneration.from_pretrained(model_id, dtype=dtype)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_id, torch_dtype=dtype)
 
     # ── LoRA ───────────────────────────────────────────────────────────────
     lora_cfg = cfg["lora"]
@@ -118,10 +152,17 @@ def main():
 
     # ── Dataset ────────────────────────────────────────────────────────────
     ds_cfg = cfg["dataset"]
-    log.info("Loading CNN/DailyMail …")
-    raw = load_dataset(ds_cfg["name"], ds_cfg.get("version") or None)
+    log.info(f"Loading {ds_cfg['name']} …")
+    version = ds_cfg.get("version")
+    raw = load_dataset(ds_cfg["name"], version) if version else load_dataset(ds_cfg["name"])
     train_ds = raw[ds_cfg["train_split"]]
     val_ds   = raw[ds_cfg["val_split"]]
+
+    # Cap eval set so generation-based evaluation stays fast each epoch
+    max_eval = ds_cfg.get("max_eval_samples")
+    if max_eval and max_eval < len(val_ds):
+        val_ds = val_ds.select(range(max_eval))
+        log.info(f"Eval set capped at {max_eval} samples")
 
     preprocess = preprocess_factory(tokenizer, cfg)
     log.info("Tokenizing splits …")
@@ -140,11 +181,12 @@ def main():
         desc="Tokenizing val",
     )
 
+    # ── Collator ────────────────────────────────────────────────────────────
     collator = DataCollatorForSeq2Seq(
         tokenizer,
         model=model,
         label_pad_token_id=-100,
-        pad_to_multiple_of=1024,
+        pad_to_multiple_of=8,
     )
 
     # ── TrainingArguments ──────────────────────────────────────────────────
@@ -158,23 +200,27 @@ def main():
         gradient_accumulation_steps=t["gradient_accumulation_steps"],
         per_device_eval_batch_size=t["per_device_eval_batch_size"],
         learning_rate=float(t["learning_rate"]),
-        max_grad_norm=t.get("max_grad_norm", 1.0), 
+        max_grad_norm=t.get("max_grad_norm", 1.0),
         lr_scheduler_type=t["lr_scheduler_type"],
-        warmup_steps=t.get("warmup_steps", 100), 
+        warmup_steps=t.get("warmup_steps", 100),
         weight_decay=t["weight_decay"],
+        label_smoothing_factor=t.get("label_smoothing_factor", 0.0),
         bf16=t["bf16"],
         fp16=t["fp16"],
         dataloader_pin_memory=t["dataloader_pin_memory"],
-        eval_strategy=t.get("eval_strategy", t.get("evaluation_strategy", "no")),
-        
-        # Native save configuration
+        dataloader_num_workers=t.get("dataloader_num_workers", 0),
+        group_by_length=t.get("group_by_length", False),
+        eval_strategy=t.get("eval_strategy", "no"),
+        eval_accumulation_steps=t.get("eval_accumulation_steps"),
+        predict_with_generate=t.get("predict_with_generate", False),
+        generation_max_length=t.get("generation_max_length"),
+
         save_strategy="steps",
         save_steps=ck["save_steps"],
-        save_total_limit=None,          # explicitly keep ALL checkpoints
-        
+        save_total_limit=ck.get("keep_last_n_steps", 3),
+
         logging_steps=t["logging_steps"],
-        predict_with_generate=False,    
-        report_to="none",               
+        report_to="none",
         seed=t["seed"],
     )
 
@@ -184,12 +230,12 @@ def main():
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=val_ds,
-        processing_class=tokenizer, 
+        processing_class=tokenizer,
         data_collator=collator,
-        # callbacks removed completely
+        compute_metrics=make_compute_metrics(tokenizer),
     )
 
-    log.info("Starting fresh training run …")
+    log.info("Starting training …")
     trainer.train(resume_from_checkpoint=args.resume)
 
     # ── Final save ─────────────────────────────────────────────────────────
