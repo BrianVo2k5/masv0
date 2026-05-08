@@ -58,6 +58,10 @@ def make_compute_metrics(tokenizer):
         if isinstance(preds, tuple):
             preds = preds[0]
 
+        # Trainer pads shorter generated sequences with a fill value that can exceed
+        # vocab size — the Rust tokenizer overflows on those. Clip to safe range first.
+        preds = np.clip(preds, 0, tokenizer.vocab_size - 1).astype(np.int32)
+
         decoded_preds  = tokenizer.batch_decode(preds, skip_special_tokens=True)
         labels         = np.where(labels != -100, labels, tokenizer.pad_token_id)
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
