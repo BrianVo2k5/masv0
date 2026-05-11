@@ -13,7 +13,7 @@ dataset:
   text_column: "document"
   summary_column: "summary"
   max_input_len: 1024            # xsum articles avg ~580 tokens; 1024 covers the long tail
-  max_target_len: 64             # xsum summaries avg ~30 tokens; 64 is a safe ceiling
+  max_target_len: 48             # xsum summaries avg ~30 tokens; 48 still covers 99%+ while cutting filler room
   num_workers: 4                 # used for dataset.map() preprocessing workers
   max_eval_samples: 1000         # cap eval set so generate-based evaluation stays fast per epoch
 
@@ -42,7 +42,7 @@ training:
   lr_scheduler_type: "cosine"       # smoother late-training decay; reduces hallucination drift
   warmup_steps: 500                 # ~5% of total steps for 3 epochs on xsum
   weight_decay: 0.01
-  label_smoothing_factor: 0.1       # softens targets → prevents overconfidence → less repetition
+  label_smoothing_factor: 0.15      # softens targets → prevents overconfidence → less repetition
   bf16: false                       # CUDA-only — keep false on MPS
   fp16: false                       # CUDA-only — keep false on MPS
   dataloader_pin_memory: false      # must be false on MPS
@@ -51,7 +51,7 @@ training:
   eval_strategy: "epoch"
   predict_with_generate: true       # generate real summaries at eval → ROUGE scores
                                     # this is what catches a model gaming teacher-forcing loss
-  generation_max_length: 64
+  generation_max_length: 48
   eval_accumulation_steps: 8        # accumulate predictions before moving to CPU — avoids eval OOM
   logging_steps: 50
   seed: 42
