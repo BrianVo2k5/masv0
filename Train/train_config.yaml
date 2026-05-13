@@ -1,10 +1,8 @@
 # train_config.yaml — edit this, training.py reads it at startup
 
 model:
-  model_id: "facebook/bart-base"
-  torch_dtype: "bfloat16"       # model weights in bf16 (~278 MB vs ~556 MB fp32)
-                                 # bf16/fp16 training flags below must stay false on MPS —
-                                 # those are CUDA-only switches; weight dtype is set here instead
+  model_id: "facebook/bart-large"
+  torch_dtype: "bfloat16"
 
 dataset:
   name: "xsum"
@@ -12,14 +10,14 @@ dataset:
   val_split: "validation"
   text_column: "document"
   summary_column: "summary"
-  max_input_len: 1024            # xsum articles avg ~580 tokens; 1024 covers the long tail
-  max_target_len: 48             # xsum summaries avg ~30 tokens; 48 still covers 99%+ while cutting filler room
-  num_workers: 4                 # used for dataset.map() preprocessing workers
-  max_eval_samples: 1000         # cap eval set so generate-based evaluation stays fast per epoch
+  max_input_len: 1024
+  max_target_len: 48
+  num_workers: 4
+  max_eval_samples: 1000
 
 lora:
   r: 16
-  lora_alpha: 32                 # 2×r
+  lora_alpha: 32
   lora_dropout: 0.05
   bias: "none"
   target_modules:
@@ -27,32 +25,30 @@ lora:
     - "v_proj"
     - "k_proj"
     - "out_proj"
+    - "fc1"
+    - "fc2"
 
 training:
   output_dir: "./runs/bart-lora-xsum"
   num_train_epochs: 3
-  # MPS pipelines better with smaller individual kernels — batch=8 at seq=1024 fits the
-  # M1 attention tile size much better than batch=32 (which creates 32×12×1024² per layer).
-  # Effective batch stays 64 via accumulation.
-  per_device_train_batch_size: 8
-  gradient_accumulation_steps: 8    # effective batch = 64
-  per_device_eval_batch_size: 16
-  learning_rate: 3.0e-5
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 16
+  per_device_eval_batch_size: 8
+  learning_rate: 2.0e-4
   max_grad_norm: 1.0
-  lr_scheduler_type: "cosine"       # smoother late-training decay; reduces hallucination drift
-  warmup_steps: 500                 # ~5% of total steps for 3 epochs on xsum
+  lr_scheduler_type: "cosine"
+  warmup_steps: 500
   weight_decay: 0.01
-  label_smoothing_factor: 0.15      # softens targets → prevents overconfidence → less repetition
-  bf16: false                       # CUDA-only — keep false on MPS
-  fp16: false                       # CUDA-only — keep false on MPS
-  dataloader_pin_memory: false      # must be false on MPS
-  dataloader_num_workers: 0         # must be 0 on MPS — tensors can't be shared across processes
-  group_by_length: true             # batch similar-length docs together → ~30% less padding waste
+  label_smoothing_factor: 0.1
+  bf16: false
+  fp16: false
+  dataloader_pin_memory: false
+  dataloader_num_workers: 0
+  group_by_length: true
   eval_strategy: "epoch"
-  predict_with_generate: true       # generate real summaries at eval → ROUGE scores
-                                    # this is what catches a model gaming teacher-forcing loss
+  predict_with_generate: true
   generation_max_length: 48
-  eval_accumulation_steps: 8        # accumulate predictions before moving to CPU — avoids eval OOM
+  eval_accumulation_steps: 8
   logging_steps: 50
   seed: 42
 

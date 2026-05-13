@@ -1,11 +1,3 @@
-"""
-export_model.py — Merge LoRA adapter into base LED model and save as .pt
-
-Usage:
-    python Train/export_model.py
-    python Train/export_model.py --checkpoint Train/runs/bart-lora/checkpoint-3600 --output led_merged.pt
-"""
-
 import argparse
 import logging
 from pathlib import Path
@@ -17,8 +9,8 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
 
-DEFAULT_CHECKPOINT = Path(__file__).parent / "runs/bart-lora/checkpoint-3600"
-DEFAULT_OUTPUT = Path(__file__).parent / "runs/bart-lora/led_lora_merged.pt"
+DEFAULT_CHECKPOINT = Path(__file__).parent / "runs/bart-lora/"
+DEFAULT_OUTPUT = Path(__file__).parent / "runs/bart-lora/model.pt"
 
 
 def main():
