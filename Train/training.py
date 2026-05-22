@@ -1,16 +1,3 @@
-"""
-training.py — BART LoRA fine-tune on XSum
-Reads all settings from train_config.yaml
-
-Usage:
-    python training.py                        # uses train_config.yaml next to this file
-    python training.py --config my_cfg.yaml   # override config path
-    python training.py --resume ./runs/ckpt   # resume from a checkpoint
-
-Requires:
-    pip install evaluate rouge_score
-"""
-
 import argparse
 import logging
 from pathlib import Path
@@ -48,8 +35,7 @@ def load_config(path: str) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ROUGE metrics — only meaningful because predict_with_generate=True
-# Teacher-forcing loss alone cannot catch a model gaming the objective.
+# ROUGE metrics 
 # ══════════════════════════════════════════════════════════════════════════════
 
 def make_compute_metrics(tokenizer):
@@ -59,7 +45,7 @@ def make_compute_metrics(tokenizer):
             preds = preds[0]
 
         # Trainer pads shorter generated sequences with a fill value that can exceed
-        # vocab size — the Rust tokenizer overflows on those. Clip to safe range first.
+        # vocab size. Clip to safe range first.
         preds = np.clip(preds, 0, tokenizer.vocab_size - 1).astype(np.int32)
 
         decoded_preds  = tokenizer.batch_decode(preds, skip_special_tokens=True)
@@ -90,7 +76,7 @@ def preprocess_factory(tokenizer, cfg: dict):
     sum_col  = cfg["dataset"].get("summary_column", "summary")
 
     def preprocess(batch):
-        # Collapse stray newlines — XSum docs can have them from BBC HTML parsing
+        # Collapse stray newlines
         documents = [" ".join(text.split()) for text in batch[text_col]]
         summaries = [" ".join(text.split()) for text in batch[sum_col]]
 
@@ -98,7 +84,7 @@ def preprocess_factory(tokenizer, cfg: dict):
             documents,
             max_length=max_in,
             truncation=True,
-            padding=False,          # collator handles per-batch padding
+            padding=False,          
         )
         targets = tokenizer(
             summaries,
@@ -130,7 +116,12 @@ def main():
     set_seed(cfg["training"]["seed"])
 
     # ── dtype ──────────────────────────────────────────────────────────────
-    dtype_map = {"fp32": torch.float32, "fp16": torch.float16, "bfloat16": torch.bfloat16}
+    dtype_map = {
+        "fp32": torch.float32, 
+        "fp16": torch.float16, 
+        "float16": torch.float16, 
+        "bfloat16": torch.bfloat16
+    }
     dtype = dtype_map[cfg["model"]["torch_dtype"]]
 
     # ── Tokenizer & model ──────────────────────────────────────────────────
@@ -139,7 +130,10 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
     log.info(f"Loading model: {model_id} ({dtype})")
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_id, torch_dtype=dtype)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_id, dtype=dtype)
+    
+    # Required when using gradient checkpointing
+    model.config.use_cache = False 
 
     # ── LoRA ───────────────────────────────────────────────────────────────
     lora_cfg = cfg["lora"]
@@ -151,6 +145,7 @@ def main():
         bias=lora_cfg["bias"],
         target_modules=lora_cfg["target_modules"],
     )
+    model.enable_input_require_grads()
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()
 
@@ -162,7 +157,6 @@ def main():
     train_ds = raw[ds_cfg["train_split"]]
     val_ds   = raw[ds_cfg["val_split"]]
 
-    # Cap eval set so generation-based evaluation stays fast each epoch
     max_eval = ds_cfg.get("max_eval_samples")
     if max_eval and max_eval < len(val_ds):
         val_ds = val_ds.select(range(max_eval))
@@ -218,6 +212,9 @@ def main():
         eval_accumulation_steps=t.get("eval_accumulation_steps"),
         predict_with_generate=t.get("predict_with_generate", False),
         generation_max_length=t.get("generation_max_length"),
+        
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
 
         save_strategy="steps",
         save_steps=ck["save_steps"],
@@ -234,7 +231,7 @@ def main():
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=val_ds,
-        processing_class=tokenizer,
+        processing_class=tokenizer, # Note: if using older transformers (<4.45), change to tokenizer=tokenizer
         data_collator=collator,
         compute_metrics=make_compute_metrics(tokenizer),
     )
