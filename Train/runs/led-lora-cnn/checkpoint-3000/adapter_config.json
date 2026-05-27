@@ -30,11 +30,11 @@
   "revision": null,
   "target_modules": [
     "k_proj",
-    "v_proj",
     "fc2",
+    "fc1",
     "out_proj",
     "q_proj",
-    "fc1"
+    "v_proj"
   ],
   "target_parameters": null,
   "task_type": "SEQ_2_SEQ_LM",

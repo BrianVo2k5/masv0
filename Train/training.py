@@ -1,5 +1,6 @@
 import argparse
 import logging
+import math
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +15,7 @@ from transformers import (
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
+    TrainerCallback,
     set_seed,
 )
 
@@ -21,6 +23,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(me
 log = logging.getLogger(__name__)
 
 rouge_metric = hf_evaluate.load("rouge")
+
+
+class NaNStopCallback(TrainerCallback):
+    """Stop training immediately if loss goes NaN/Inf — critical safety net for fp16 without loss scaling."""
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        loss = (logs or {}).get("loss", 0.0)
+        if math.isnan(loss) or math.isinf(loss):
+            log.error(f"NaN/Inf loss at step {state.global_step} — stopping training")
+            control.should_training_stop = True
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -117,10 +128,11 @@ def main():
 
     # ── dtype ──────────────────────────────────────────────────────────────
     dtype_map = {
-        "fp32": torch.float32, 
-        "fp16": torch.float16, 
-        "float16": torch.float16, 
-        "bfloat16": torch.bfloat16
+        "fp32": torch.float32,
+        "float32": torch.float32,
+        "fp16": torch.float16,
+        "float16": torch.float16,
+        "bfloat16": torch.bfloat16,
     }
     dtype = dtype_map[cfg["model"]["torch_dtype"]]
 
@@ -130,7 +142,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
     log.info(f"Loading model: {model_id} ({dtype})")
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_id, dtype=dtype)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_id, torch_dtype=dtype)
     
     # Required when using gradient checkpointing
     model.config.use_cache = False 
@@ -234,6 +246,7 @@ def main():
         processing_class=tokenizer, # Note: if using older transformers (<4.45), change to tokenizer=tokenizer
         data_collator=collator,
         compute_metrics=make_compute_metrics(tokenizer),
+        callbacks=[NaNStopCallback()],
     )
 
     log.info("Starting training …")

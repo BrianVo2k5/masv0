@@ -2,7 +2,7 @@
 
 model:
   model_id: "allenai/led-base-16384"
-  torch_dtype: "float16" # Use float16 to reduce memory footprint on M1
+  torch_dtype: "float16" # native MPS fp16 — model weights and fwd/bwd in fp16 on MPS; no CUDA AMP needed
 
 dataset:
   name: "abisee/cnn_dailymail"
@@ -32,17 +32,17 @@ lora:
 training:
   output_dir: "./runs/led-lora-cnn" # Updated to reflect actual model/dataset
   num_train_epochs: 3
-  per_device_train_batch_size: 2    # Kept low (2) to avoid M1 unified memory Out-Of-Memory (OOM) errors
-  gradient_accumulation_steps: 32   # Increased to 32 to maintain a solid effective batch size (64)
-  per_device_eval_batch_size: 4     # Lowered to 4 for evaluation memory stability
-  learning_rate: 2.0e-4
-  max_grad_norm: 1.0
+  per_device_train_batch_size: 2    # keep low for M1 unified memory
+  gradient_accumulation_steps: 16   # effective batch = 32; fewer steps reduces fp16 rounding accumulation vs 32
+  per_device_eval_batch_size: 4
+  learning_rate: 5.0e-5
+  max_grad_norm: 0.3                # tighter than default 1.0 — fp16 has no loss scaling so clipping is the only guard
   lr_scheduler_type: "cosine"
-  warmup_steps: 500
+  warmup_steps: 1000                # longer warmup keeps lr low during the noisiest early steps
   weight_decay: 0.01
   label_smoothing_factor: 0.0  # LabelSmoother gets labels padded to encoder length (1024) but logits are decoder length (48) → shape crash
   bf16: false
-  fp16: false                       # MPS does not support CUDA AMP (torch.cuda.amp); model weights in float16 still reduce memory
+  fp16: false                       # MPS does not support CUDA AMP (torch.cuda.amp)
   dataloader_pin_memory: false      # Must be false; pin_memory is for CUDA only
   dataloader_num_workers: 0         # MPS tensors in DataCollatorForSeq2Seq cannot be serialized for worker IPC
   group_by_length: true
