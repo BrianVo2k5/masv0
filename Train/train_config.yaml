@@ -48,7 +48,7 @@ training:
   group_by_length: true
   eval_strategy: "epoch"
   predict_with_generate: true
-  generation_max_length: 48
+  generation_max_length: 128
   eval_accumulation_steps: 4        # Mitigates CPU-to-GPU memory spikes during eval generation
   logging_steps: 50
   seed: 42

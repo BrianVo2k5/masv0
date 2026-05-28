@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 BASE_MODEL_ID = "allenai/led-base-16384"
 
-DEFAULT_CHECKPOINT = Path(__file__).parent / "runs/led-lora-cnn/checkpoint-1800"
+DEFAULT_CHECKPOINT = Path(__file__).parent / "runs/led-lora-cnn/checkpoint-3400"
 DEFAULT_OUTPUT = Path(__file__).parent / "runs/model.pt"
 
 
