@@ -14,8 +14,8 @@ log = logging.getLogger(__name__)
 
 BASE_MODEL_ID = "allenai/led-base-16384"
 
-DEFAULT_CHECKPOINT = Path(__file__).parent / "runs/led-lora-cnn/checkpoint-3400"
-DEFAULT_OUTPUT = Path(__file__).parent / "runs/model.pt"
+DEFAULT_CHECKPOINT = Path(__file__).parent / "runs/bart-lora-xsum/checkpoint-7200"
+DEFAULT_OUTPUT = Path(__file__).parent / "runs/model_bart-xsum.pt"
 
 
 def main():
