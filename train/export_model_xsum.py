@@ -12,10 +12,10 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BASE_MODEL_ID = "allenai/led-base-16384"
+BASE_MODEL_ID = "facebook/bart-large"
 
 DEFAULT_CHECKPOINT = Path(__file__).parent / "runs/bart-lora-xsum/checkpoint-7200"
-DEFAULT_OUTPUT = Path(__file__).parent / "runs/model_bart-xsum.pt"
+DEFAULT_OUTPUT = Path(__file__).parent / "runs/models/model_bart-xsum.pt"
 
 
 def main():
