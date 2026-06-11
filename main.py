@@ -9,10 +9,12 @@ from kivy.properties import NumericProperty, StringProperty
 from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.config import Config
-from contents.chat import ChatScreen
+from contents.chat import ChatScreen, set_active_model
+import contents.settings as app_settings
 from kivy.factory import Factory
 from file_upload import FileUploadManager
 from kivymd.uix.label import MDLabel
+from kivymd.toast import toast
 
 Factory.register("ChatScreen", cls=ChatScreen)
 
@@ -24,9 +26,10 @@ class MainRoot(FloatLayout):
     pass
 
 class ChatApp(MDApp):
-    reveal_radius = NumericProperty(0) 
+    reveal_radius = NumericProperty(0)
     user_uuid = str(uuid.uuid4())
-    user_name = StringProperty("buddy") 
+    user_name = StringProperty("buddy")
+    active_model = StringProperty(app_settings.ACTIVE_MODEL)
     bot_name = StringProperty("researchr.masv0")
     bot_description = StringProperty("Your friendly neighborhood summarizer.")
 
@@ -85,6 +88,11 @@ class ChatApp(MDApp):
         if sm:
             sm.transition.direction = "right"
             sm.current = "chat"
+
+    def switch_model(self, key: str):
+        set_active_model(key)
+        self.active_model = key
+        toast(f"Model: {app_settings.MODEL_DISPLAY_NAMES.get(key, key)}")
 
     def start_reveal_animation(self, dt):
         max_radius = (Window.width**2 + Window.height**2)**0.5

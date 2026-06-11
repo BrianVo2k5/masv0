@@ -97,9 +97,19 @@
         MDTopAppBar:
             title: "What would you like to summarize today, " + app.user_name + "?"
             elevation: 0
-            md_bg_color: 1, 1, 1, 1          
+            md_bg_color: 1, 1, 1, 1
             specific_text_color: 0, 0, 0, 1
             right_action_items: [["cog", lambda x: app.switch_to_settings()]]
+
+        MDLabel:
+            text: "Model: " + ("BART XSum" if app.active_model == "bart-xsum" else "CNN / Daily Mail")
+            font_name: "JetBrains Mono"
+            font_style: "Caption"
+            theme_text_color: "Hint"
+            halign: "right"
+            size_hint_y: None
+            height: "18dp"
+            padding_x: "20dp"
 
         MDScrollView:
             id: scroll_view
@@ -148,25 +158,54 @@
     md_bg_color: 1, 1, 1, 1
     MDBoxLayout:
         orientation: 'vertical'
-        spacing: "-50dp"
+
         MDTopAppBar:
+            title: "Settings"
             elevation: 0
-            md_bg_color: 1, 1, 1, 1          
+            md_bg_color: 1, 1, 1, 1
             specific_text_color: 0, 0, 0, 1
-            left_action_items: [["arrow-left", lambda x: app.go_back_to_chat()]]   
-        
-        AsyncImage:
-            source: "app_textures/not_found.gif"
-            size_hint: None, None
-            size: "800dp", "800dp"
-            pos_hint: {"center_x": .5}
-            anim_delay: 0.032
-            anim_loop: 0
-            allow_stretch: True
-            keep_ratio: True
-            loading_image: 'app_textures/loading_placeholder.png' 
-        
-        MDLabel:
-            text: "404, 'settings' can't not be found, have you tried updating the application?"
-            halign: "center"
-            font_style: "H6"
+            left_action_items: [["arrow-left", lambda x: app.go_back_to_chat()]]
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            padding: "40dp"
+            spacing: "20dp"
+
+            MDLabel:
+                text: "Summarization Model"
+                font_name: "JetBrains Mono"
+                font_style: "H5"
+                theme_text_color: "Primary"
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            MDLabel:
+                text: "Both models are pre-loaded — switching is instant."
+                font_name: "JetBrains Mono"
+                theme_text_color: "Secondary"
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                spacing: "10dp"
+                size_hint_y: None
+                adaptive_height: True
+
+                MDFillRoundFlatButton:
+                    text: "BART XSum"
+                    font_name: "JetBrains Mono"
+                    size_hint_x: 1
+                    md_bg_color: (0.1, 0.1, 0.1, 1) if app.active_model == "bart-xsum" else (0.94, 0.94, 0.94, 1)
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 1) if app.active_model == "bart-xsum" else (0.3, 0.3, 0.3, 1)
+                    on_release: app.switch_model("bart-xsum")
+
+                MDFillRoundFlatButton:
+                    text: "CNN / Daily Mail"
+                    font_name: "JetBrains Mono"
+                    size_hint_x: 1
+                    md_bg_color: (0.1, 0.1, 0.1, 1) if app.active_model == "cnn-dm" else (0.94, 0.94, 0.94, 1)
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 1) if app.active_model == "cnn-dm" else (0.3, 0.3, 0.3, 1)
+                    on_release: app.switch_model("cnn-dm")

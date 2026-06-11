@@ -1,4 +1,4 @@
 /venv
 .venv/
 
-Train/runs/models
+train/runs/models
