@@ -214,7 +214,7 @@
                 orientation: 'vertical'
                 spacing: "6dp"
                 size_hint_y: None
-                adaptive_height: True
+                height: "78dp"
 
                 MDBoxLayout:
                     orientation: 'horizontal'
@@ -235,11 +235,12 @@
                         halign: "right"
                         size_hint_x: 0.3
 
-                MDSlider:
+                Slider:
                     id: output_slider
+                    size_hint_y: None
+                    height: "46dp"
                     min: app.output_tokens_min
                     max: app.output_tokens_max
                     value: app.output_tokens
                     step: 1
-                    hint: False
                     on_value: app.on_output_tokens_change(self.value)
