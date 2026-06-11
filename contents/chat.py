@@ -12,6 +12,8 @@ warnings.filterwarnings("ignore")
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, logging
 logging.set_verbosity_error()
 
+import contents.settings as app_settings
+
 from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.metrics import dp
@@ -34,37 +36,47 @@ from kivymd.uix.selectioncontrol import MDCheckbox
 # MODEL SETUP
 # =========================================================
 
-base_model_name = "allenai/led-base-16384"
-
-print("Loading tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-
-print("Loading base model...")
-model = AutoModelForSeq2SeqLM.from_pretrained(base_model_name)
-
-print("Loading checkpoint...")
-ckpt = torch.load(
-    "Train/runs/model.pt",
-    map_location="cpu" # Load to CPU safely first before switching devices
-)
-
-# SAFER LOADING
-missing, unexpected = model.load_state_dict(
-    ckpt["model_state_dict"],
-    strict=False
-)
-
-print("\n========== MODEL LOAD REPORT ==========")
-print(f"Missing keys: {len(missing)}")
-print(f"Unexpected keys: {len(unexpected)}")
-print("=======================================\n")
-
-model.eval()
-
-# Check if an NVIDIA GPU is available to accelerate inference speed
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model.to(device)
-print(f"Model successfully anchored on: {device.upper()}")
+
+
+def _load_single_model(key: str, path: str) -> dict:
+    print(f"  [{key}] Loading checkpoint from {path}...")
+    ckpt = torch.load(path, map_location="cpu")
+
+    base_name = ckpt["base_model"]
+    print(f"  [{key}] Base: {base_name}")
+
+    tokenizer = AutoTokenizer.from_pretrained(base_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(base_name)
+
+    missing, unexpected = model.load_state_dict(ckpt["model_state_dict"], strict=False)
+    print(f"  [{key}] Missing keys: {len(missing)} | Unexpected keys: {len(unexpected)}")
+
+    model.eval()
+    model.to(device)
+
+    # LED models require a global attention mask on the first token
+    uses_global_attention = "led" in base_name.lower()
+
+    return {"model": model, "tokenizer": tokenizer, "uses_global_attention": uses_global_attention}
+
+
+print(f"\nDevice: {device.upper()}")
+print("Pre-loading all models...")
+
+loaded_models: dict = {}
+for _key, _path in app_settings.MODEL_PATHS.items():
+    loaded_models[_key] = _load_single_model(_key, _path)
+
+print(f"All models ready. Active: {app_settings.ACTIVE_MODEL}\n")
+
+
+def set_active_model(key: str) -> None:
+    """Switch the active model. Called by the UI when the user changes selection."""
+    if key not in loaded_models:
+        raise ValueError(f"Unknown model key '{key}'. Valid keys: {list(loaded_models)}")
+    app_settings.ACTIVE_MODEL = key
+    print(f"[Model] Switched to: {key} ({app_settings.MODEL_DISPLAY_NAMES.get(key, key)})")
 
 
 # =========================================================
@@ -250,34 +262,37 @@ class ChatScreen(MDScreen):
 
         def generate_summary():
             try:
-                # Tokenize and push directly onto designated active device (CPU or CUDA)
-                inputs = tokenizer(
+                active = loaded_models[app_settings.ACTIVE_MODEL]
+                active_model = active["model"]
+                active_tokenizer = active["tokenizer"]
+
+                inputs = active_tokenizer(
                     original_text,
                     return_tensors="pt",
                     truncation=True,
-                    max_length=4096 
+                    max_length=4096
                 ).to(device)
-                
-                global_attention_mask = torch.zeros_like(inputs["input_ids"]).to(device)
-                global_attention_mask[:, 0] = 1
 
-                # Safety parameters explicitly mapped out to block loop generation 
+                gen_kwargs = dict(
+                    input_ids=inputs["input_ids"],
+                    attention_mask=inputs["attention_mask"],
+                    max_new_tokens=150,
+                    min_length=30,
+                    num_beams=4,               # Reduced search breadth for faster computation
+                    no_repeat_ngram_size=3,    # Absolute block preventing repeating phrases
+                    repetition_penalty=0.5,    # Heavily forces structural variety
+                    early_stopping=True,       # Let model break cleanly when sentence completes
+                )
+
+                if active["uses_global_attention"]:
+                    global_attention_mask = torch.zeros_like(inputs["input_ids"]).to(device)
+                    global_attention_mask[:, 0] = 1
+                    gen_kwargs["global_attention_mask"] = global_attention_mask
+
                 with torch.no_grad():
-                    summary_ids = model.generate(
-                        inputs["input_ids"],
-                        attention_mask=inputs["attention_mask"],
-                        global_attention_mask=global_attention_mask,
+                    summary_ids = active_model.generate(**gen_kwargs)
 
-                        max_new_tokens=150,   
-                        min_length=30,       
-
-                        num_beams=4,               # Reduced search breath for faster computation
-                        no_repeat_ngram_size=3,    # Absolute block preventing repeating phrases
-                        repetition_penalty=0.5,    # Heavily forces structural variety
-                        early_stopping=True,       # Let model break cleanly when sentence completes
-                    )
-
-                final_text = tokenizer.decode(
+                final_text = active_tokenizer.decode(
                     summary_ids[0],
                     skip_special_tokens=True
                 )
