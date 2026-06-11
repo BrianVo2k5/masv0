@@ -37,7 +37,7 @@ class ChatApp(MDApp):
     output_tokens_min    = NumericProperty(0)
     output_tokens_max    = NumericProperty(0)
     active_max_new_tokens = NumericProperty(0)  # live value shown in chat indicator
-    max_attempts         = NumericProperty(2)
+    max_attempts         = NumericProperty(10)
 
     def build(self):
         self.title = "researchr.masv0"
@@ -115,7 +115,7 @@ class ChatApp(MDApp):
         self.active_max_new_tokens = app_settings.ACTIVE_MAX_NEW_TOKENS
 
     def adjust_max_attempts(self, delta: int):
-        new_val = max(1, min(5, self.max_attempts + delta))
+        new_val = max(1, min(20, self.max_attempts + delta))
         self.max_attempts = new_val
         set_max_attempts(new_val)
 

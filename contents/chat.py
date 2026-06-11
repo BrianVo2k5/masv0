@@ -77,18 +77,21 @@ def set_active_model(key: str) -> None:
         raise ValueError(f"Unknown model key '{key}'. Valid keys: {list(loaded_models)}")
     app_settings.ACTIVE_MODEL = key
     app_settings.ACTIVE_MAX_NEW_TOKENS = app_settings.MODEL_GENERATION[key]["optimal"]
+    app_settings.ACTIVE_MIN_LENGTH = int(app_settings.ACTIVE_MAX_NEW_TOKENS * 0.8)
     print(f"[Model] Switched to: {key} ({app_settings.MODEL_DISPLAY_NAMES.get(key, key)})")
 
 
 def set_output_tokens(tokens: int) -> None:
     """Clamp and apply a user-selected max_new_tokens for the active model."""
     gen = app_settings.MODEL_GENERATION[app_settings.ACTIVE_MODEL]
-    app_settings.ACTIVE_MAX_NEW_TOKENS = max(gen["min_length"], min(tokens, gen["max_new_tokens"]))
+    safe_tokens = min(tokens, gen["max_new_tokens"])
+    app_settings.ACTIVE_MAX_NEW_TOKENS = safe_tokens
+    app_settings.ACTIVE_MIN_LENGTH = int(safe_tokens * 0.8)
 
 
 def set_max_attempts(count: int) -> None:
-    """Set how many generation attempts are allowed (1–5)."""
-    app_settings.MAX_ATTEMPTS = max(1, min(5, count))
+    """Set how many generation attempts are allowed (1–20)."""
+    app_settings.MAX_ATTEMPTS = max(1, min(20, count))
 
 
 # =========================================================
@@ -290,18 +293,24 @@ class ChatScreen(MDScreen):
                 gen_kwargs = dict(
                     input_ids=inputs["input_ids"],
                     attention_mask=inputs["attention_mask"],
+                    pad_token_id=active_tokenizer.pad_token_id,
                     max_new_tokens=app_settings.ACTIVE_MAX_NEW_TOKENS,
-                    min_length=gen_cfg["min_length"],
+                    min_length=app_settings.ACTIVE_MIN_LENGTH,
                     num_beams=4,               # Reduced search breadth for faster computation
                     no_repeat_ngram_size=3,    # Absolute block preventing repeating phrases
                     repetition_penalty=0.5,    # Heavily forces structural variety
+                    length_penalty=2.0,
                     early_stopping=True,       # Let model break cleanly when sentence completes
+                    do_sample=True,
+                    temperature=0.7,
                 )
 
                 if active["uses_global_attention"]:
                     global_attention_mask = torch.zeros_like(inputs["input_ids"]).to(device)
                     global_attention_mask[:, 0] = 1
                     gen_kwargs["global_attention_mask"] = global_attention_mask
+
+                best_candidate = ""
 
                 for attempt in range(app_settings.MAX_ATTEMPTS):
                     with torch.no_grad():
@@ -314,9 +323,13 @@ class ChatScreen(MDScreen):
                     candidate = re.sub(r"\s+", " ", candidate).strip()
                     candidate = candidate.replace(" .", ".").replace(" ,", ",")
 
-                    final_text = candidate
-                    if candidate:
+                    if len(candidate) > len(best_candidate):
+                        best_candidate = candidate
+
+                    if len(best_candidate) > (app_settings.ACTIVE_MIN_LENGTH * 4): 
                         break
+
+                final_text = best_candidate
 
             except Exception as e:
                 final_text = f"Error: {str(e)}"

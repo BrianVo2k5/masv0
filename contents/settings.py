@@ -34,7 +34,8 @@ MODEL_GENERATION = {
 
 # Mutable at runtime — updated by set_active_model(), set_output_tokens(), set_max_attempts().
 ACTIVE_MAX_NEW_TOKENS: int = MODEL_GENERATION[ACTIVE_MODEL]["optimal"]
+ACTIVE_MIN_LENGTH: int = int(ACTIVE_MAX_NEW_TOKENS * 0.8)
 
 # How many generation attempts are allowed before giving up (applies to both models).
-# 1 = single attempt (no retry); 5 = up to 5 attempts.
-MAX_ATTEMPTS: int = 2
+# 1 = single attempt (no retry); 20 = up to 20 attempts.
+MAX_ATTEMPTS: int = 10
