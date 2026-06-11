@@ -209,3 +209,37 @@
                     theme_text_color: "Custom"
                     text_color: (1, 1, 1, 1) if app.active_model == "cnn-dm" else (0.3, 0.3, 0.3, 1)
                     on_release: app.switch_model("cnn-dm")
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                spacing: "6dp"
+                size_hint_y: None
+                adaptive_height: True
+
+                MDBoxLayout:
+                    orientation: 'horizontal'
+                    size_hint_y: None
+                    height: "22dp"
+
+                    MDLabel:
+                        text: "Max output length"
+                        font_name: "JetBrains Mono"
+                        theme_text_color: "Secondary"
+                        size_hint_x: 0.7
+
+                    MDLabel:
+                        id: token_label
+                        text: str(int(output_slider.value)) + " tokens"
+                        font_name: "JetBrains Mono"
+                        theme_text_color: "Primary"
+                        halign: "right"
+                        size_hint_x: 0.3
+
+                MDSlider:
+                    id: output_slider
+                    min: app.output_tokens_min
+                    max: app.output_tokens_max
+                    value: app.output_tokens
+                    step: 1
+                    hint: False
+                    on_value: app.on_output_tokens_change(self.value)

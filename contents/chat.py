@@ -72,11 +72,18 @@ print(f"All models ready. Active: {app_settings.ACTIVE_MODEL}\n")
 
 
 def set_active_model(key: str) -> None:
-    """Switch the active model. Called by the UI when the user changes selection."""
+    """Switch the active model and reset output length to that model's optimal."""
     if key not in loaded_models:
         raise ValueError(f"Unknown model key '{key}'. Valid keys: {list(loaded_models)}")
     app_settings.ACTIVE_MODEL = key
+    app_settings.ACTIVE_MAX_NEW_TOKENS = app_settings.MODEL_GENERATION[key]["optimal"]
     print(f"[Model] Switched to: {key} ({app_settings.MODEL_DISPLAY_NAMES.get(key, key)})")
+
+
+def set_output_tokens(tokens: int) -> None:
+    """Clamp and apply a user-selected max_new_tokens for the active model."""
+    gen = app_settings.MODEL_GENERATION[app_settings.ACTIVE_MODEL]
+    app_settings.ACTIVE_MAX_NEW_TOKENS = max(gen["min_length"], min(tokens, gen["max_new_tokens"]))
 
 
 # =========================================================
@@ -273,11 +280,12 @@ class ChatScreen(MDScreen):
                     max_length=4096
                 ).to(device)
 
+                gen_cfg = app_settings.MODEL_GENERATION[app_settings.ACTIVE_MODEL]
                 gen_kwargs = dict(
                     input_ids=inputs["input_ids"],
                     attention_mask=inputs["attention_mask"],
-                    max_new_tokens=150,
-                    min_length=30,
+                    max_new_tokens=app_settings.ACTIVE_MAX_NEW_TOKENS,
+                    min_length=gen_cfg["min_length"],
                     num_beams=4,               # Reduced search breadth for faster computation
                     no_repeat_ngram_size=3,    # Absolute block preventing repeating phrases
                     repetition_penalty=0.5,    # Heavily forces structural variety

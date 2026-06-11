@@ -9,7 +9,7 @@ from kivy.properties import NumericProperty, StringProperty
 from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.config import Config
-from contents.chat import ChatScreen, set_active_model
+from contents.chat import ChatScreen, set_active_model, set_output_tokens
 import contents.settings as app_settings
 from kivy.factory import Factory
 from file_upload import FileUploadManager
@@ -33,12 +33,18 @@ class ChatApp(MDApp):
     bot_name = StringProperty("researchr.masv0")
     bot_description = StringProperty("Your friendly neighborhood summarizer.")
 
+    output_tokens     = NumericProperty(0)
+    output_tokens_min = NumericProperty(0)
+    output_tokens_max = NumericProperty(0)
+
     def build(self):
         self.title = "researchr.masv0"
-        
+
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
         self.file_manager = FileUploadManager(self.handle_uploaded_text)
+
+        self._sync_generation_props(app_settings.ACTIVE_MODEL)
 
         if os.path.exists("app_fonts/JetBrainsMono-Regular.ttf"):
             LabelBase.register(
@@ -92,7 +98,17 @@ class ChatApp(MDApp):
     def switch_model(self, key: str):
         set_active_model(key)
         self.active_model = key
+        self._sync_generation_props(key)
         toast(f"Model: {app_settings.MODEL_DISPLAY_NAMES.get(key, key)}")
+
+    def _sync_generation_props(self, key: str):
+        gen = app_settings.MODEL_GENERATION[key]
+        self.output_tokens_min = gen["min_length"]
+        self.output_tokens_max = gen["max_new_tokens"]
+        self.output_tokens     = gen["optimal"]
+
+    def on_output_tokens_change(self, value: float):
+        set_output_tokens(int(value))
 
     def start_reveal_animation(self, dt):
         max_radius = (Window.width**2 + Window.height**2)**0.5
