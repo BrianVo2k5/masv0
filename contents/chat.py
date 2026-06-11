@@ -86,6 +86,11 @@ def set_output_tokens(tokens: int) -> None:
     app_settings.ACTIVE_MAX_NEW_TOKENS = max(gen["min_length"], min(tokens, gen["max_new_tokens"]))
 
 
+def set_max_attempts(count: int) -> None:
+    """Set how many generation attempts are allowed (1–5)."""
+    app_settings.MAX_ATTEMPTS = max(1, min(5, count))
+
+
 # =========================================================
 # FEEDBACK CONTENT
 # =========================================================
@@ -268,6 +273,7 @@ class ChatScreen(MDScreen):
         anim_event = Clock.schedule_interval(shift_dots, 0.5)
 
         def generate_summary():
+            final_text = ""
             try:
                 active = loaded_models[app_settings.ACTIVE_MODEL]
                 active_model = active["model"]
@@ -297,17 +303,20 @@ class ChatScreen(MDScreen):
                     global_attention_mask[:, 0] = 1
                     gen_kwargs["global_attention_mask"] = global_attention_mask
 
-                with torch.no_grad():
-                    summary_ids = active_model.generate(**gen_kwargs)
+                for attempt in range(app_settings.MAX_ATTEMPTS):
+                    with torch.no_grad():
+                        summary_ids = active_model.generate(**gen_kwargs)
 
-                final_text = active_tokenizer.decode(
-                    summary_ids[0],
-                    skip_special_tokens=True
-                )
+                    candidate = active_tokenizer.decode(
+                        summary_ids[0],
+                        skip_special_tokens=True
+                    )
+                    candidate = re.sub(r"\s+", " ", candidate).strip()
+                    candidate = candidate.replace(" .", ".").replace(" ,", ",")
 
-                # Strip structural layout formatting anomalies
-                final_text = re.sub(r"\s+", " ", final_text).strip()
-                final_text = final_text.replace(" .", ".").replace(" ,", ",")
+                    final_text = candidate
+                    if candidate:
+                        break
 
             except Exception as e:
                 final_text = f"Error: {str(e)}"

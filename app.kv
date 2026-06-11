@@ -102,7 +102,7 @@
             right_action_items: [["cog", lambda x: app.switch_to_settings()]]
 
         MDLabel:
-            text: "Model: " + ("BART XSum" if app.active_model == "bart-xsum" else "CNN / Daily Mail")
+            text: ("BART XSum" if app.active_model == "bart-xsum" else "CNN / Daily Mail") + "  ·  " + str(app.active_max_new_tokens) + " tok max"
             font_name: "JetBrains Mono"
             font_style: "Caption"
             theme_text_color: "Hint"
@@ -244,3 +244,37 @@
                     value: app.output_tokens
                     step: 1
                     on_value: app.on_output_tokens_change(self.value)
+
+            MDBoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: "52dp"
+                spacing: "8dp"
+
+                MDLabel:
+                    text: "Max attempts"
+                    font_name: "JetBrains Mono"
+                    theme_text_color: "Secondary"
+                    size_hint_x: 0.6
+                    pos_hint: {"center_y": 0.5}
+
+                MDIconButton:
+                    icon: "minus"
+                    pos_hint: {"center_y": 0.5}
+                    disabled: app.max_attempts <= 1
+                    on_release: app.adjust_max_attempts(-1)
+
+                MDLabel:
+                    text: str(app.max_attempts)
+                    font_name: "JetBrains Mono"
+                    theme_text_color: "Primary"
+                    halign: "center"
+                    size_hint_x: None
+                    width: "24dp"
+                    pos_hint: {"center_y": 0.5}
+
+                MDIconButton:
+                    icon: "plus"
+                    pos_hint: {"center_y": 0.5}
+                    disabled: app.max_attempts >= 5
+                    on_release: app.adjust_max_attempts(1)
