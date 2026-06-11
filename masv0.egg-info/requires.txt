@@ -1,8 +1,0 @@
-kivy
-kivymd
-kaki
-watchdog
-gspread
-google-auth
-torch
-transformers<5

@@ -10,3 +10,5 @@ opencv-python
 pytesseract
 plyer
 pypdf2
+
+matplotlib

@@ -97,9 +97,19 @@
         MDTopAppBar:
             title: "What would you like to summarize today, " + app.user_name + "?"
             elevation: 0
-            md_bg_color: 1, 1, 1, 1          
+            md_bg_color: 1, 1, 1, 1
             specific_text_color: 0, 0, 0, 1
             right_action_items: [["cog", lambda x: app.switch_to_settings()]]
+
+        MDLabel:
+            text: ("BART XSum" if app.active_model == "bart-xsum" else "CNN / Daily Mail") + "  ·  " + str(app.active_max_new_tokens) + " tok max"
+            font_name: "JetBrains Mono"
+            font_style: "Caption"
+            theme_text_color: "Hint"
+            halign: "right"
+            size_hint_y: None
+            height: "18dp"
+            padding_x: "20dp"
 
         MDScrollView:
             id: scroll_view
@@ -148,25 +158,123 @@
     md_bg_color: 1, 1, 1, 1
     MDBoxLayout:
         orientation: 'vertical'
-        spacing: "-50dp"
+
         MDTopAppBar:
+            title: "Settings"
             elevation: 0
-            md_bg_color: 1, 1, 1, 1          
+            md_bg_color: 1, 1, 1, 1
             specific_text_color: 0, 0, 0, 1
-            left_action_items: [["arrow-left", lambda x: app.go_back_to_chat()]]   
-        
-        AsyncImage:
-            source: "app_textures/not_found.gif"
-            size_hint: None, None
-            size: "800dp", "800dp"
-            pos_hint: {"center_x": .5}
-            anim_delay: 0.032
-            anim_loop: 0
-            allow_stretch: True
-            keep_ratio: True
-            loading_image: 'app_textures/loading_placeholder.png' 
-        
-        MDLabel:
-            text: "404, 'settings' can't not be found, have you tried updating the application?"
-            halign: "center"
-            font_style: "H6"
+            left_action_items: [["arrow-left", lambda x: app.go_back_to_chat()]]
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            padding: "40dp"
+            spacing: "20dp"
+
+            MDLabel:
+                text: "Summarization Model"
+                font_name: "JetBrains Mono"
+                font_style: "H5"
+                theme_text_color: "Primary"
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            MDLabel:
+                text: "Both models are pre-loaded — switching is instant."
+                font_name: "JetBrains Mono"
+                theme_text_color: "Secondary"
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                spacing: "10dp"
+                size_hint_y: None
+                adaptive_height: True
+
+                MDFillRoundFlatButton:
+                    text: "BART XSum"
+                    font_name: "JetBrains Mono"
+                    size_hint_x: 1
+                    md_bg_color: (0.1, 0.1, 0.1, 1) if app.active_model == "bart-xsum" else (0.94, 0.94, 0.94, 1)
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 1) if app.active_model == "bart-xsum" else (0.3, 0.3, 0.3, 1)
+                    on_release: app.switch_model("bart-xsum")
+
+                MDFillRoundFlatButton:
+                    text: "CNN / Daily Mail"
+                    font_name: "JetBrains Mono"
+                    size_hint_x: 1
+                    md_bg_color: (0.1, 0.1, 0.1, 1) if app.active_model == "cnn-dm" else (0.94, 0.94, 0.94, 1)
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 1) if app.active_model == "cnn-dm" else (0.3, 0.3, 0.3, 1)
+                    on_release: app.switch_model("cnn-dm")
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                spacing: "6dp"
+                size_hint_y: None
+                height: "78dp"
+
+                MDBoxLayout:
+                    orientation: 'horizontal'
+                    size_hint_y: None
+                    height: "22dp"
+
+                    MDLabel:
+                        text: "Max output length"
+                        font_name: "JetBrains Mono"
+                        theme_text_color: "Secondary"
+                        size_hint_x: 0.7
+
+                    MDLabel:
+                        id: token_label
+                        text: str(int(output_slider.value)) + " tokens"
+                        font_name: "JetBrains Mono"
+                        theme_text_color: "Primary"
+                        halign: "right"
+                        size_hint_x: 0.3
+
+                Slider:
+                    id: output_slider
+                    size_hint_y: None
+                    height: "46dp"
+                    min: app.output_tokens_min
+                    max: app.output_tokens_max
+                    value: app.output_tokens
+                    step: 1
+                    on_value: app.on_output_tokens_change(self.value)
+
+            MDBoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: "52dp"
+                spacing: "8dp"
+
+                MDLabel:
+                    text: "Max attempts"
+                    font_name: "JetBrains Mono"
+                    theme_text_color: "Secondary"
+                    size_hint_x: 0.6
+                    pos_hint: {"center_y": 0.5}
+
+                MDIconButton:
+                    icon: "minus"
+                    pos_hint: {"center_y": 0.5}
+                    disabled: app.max_attempts <= 1
+                    on_release: app.adjust_max_attempts(-1)
+
+                MDLabel:
+                    text: str(app.max_attempts)
+                    font_name: "JetBrains Mono"
+                    theme_text_color: "Primary"
+                    halign: "center"
+                    size_hint_x: None
+                    width: "24dp"
+                    pos_hint: {"center_y": 0.5}
+
+                MDIconButton:
+                    icon: "plus"
+                    pos_hint: {"center_y": 0.5}
+                    disabled: app.max_attempts >=20
+                    on_release: app.adjust_max_attempts(1)
