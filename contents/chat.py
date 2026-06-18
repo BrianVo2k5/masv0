@@ -491,7 +491,7 @@ class ChatScreen(MDScreen):
     def _upload_to_sheets_worker(self, prompt_text, bot_response, ratings_dict, feedback_text, user_uuid):
         try:
             gc = gspread.service_account(filename="credentials.json")
-            sheet = gc.open_by_key("1nmiDOoYGxnxlJ5v0fxGJqF0i2LzaVJSHKzcTEIAoawQ").sheet1
+            sheet = gc.open_by_key("1wdqfIMdjH3CcntTvENLVHzeShUFW-XxaFWvu7WGfU2E").sheet1
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             row_data = [

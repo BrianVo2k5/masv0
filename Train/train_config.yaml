@@ -9,8 +9,8 @@ dataset:
   version: "3.0.0"
   train_split: "train"
   val_split: "validation"
-  text_column: "article"     # CRITICAL FIX: Changed from "document"
-  summary_column: "highlights" # CRITICAL FIX: Changed from "summary"
+  text_column: "article"
+  summary_column: "highlights"
   max_input_len: 1024
   max_target_len: 48
   num_workers: 2             # Reduced to 2 to prevent M1 memory thrashing
